@@ -49,15 +49,79 @@ python3 -m ensurepip --upgrade
 
 ## Install
 
+### Using pip (included with Python)
+
+pip comes bundled with Python 3.4+. Verify it's available:
+
+```bash
+pip --version
+```
+
+If not found, try `pip3 --version`. If still missing:
+
+```bash
+python3 -m ensurepip --upgrade
+```
+
+Then install kwtsms:
+
 ```bash
 pip install kwtsms
 ```
 
-Other package managers:
+### Using uv (recommended for new projects)
+
+uv is a fast Python package manager written in Rust. Install it first:
+
+```bash
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Or with pip
+pip install uv
+```
+
+Then install kwtsms:
 
 ```bash
 uv add kwtsms
+```
+
+### Using poetry
+
+Install poetry first if you don't have it:
+
+```bash
+# macOS / Linux
+curl -sSL https://install.python-poetry.org | python3 -
+
+# Windows (PowerShell)
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | python -
+
+# Or with pip
+pip install poetry
+```
+
+Then install kwtsms:
+
+```bash
 poetry add kwtsms
+```
+
+### Using pipenv
+
+Install pipenv first if you don't have it:
+
+```bash
+pip install pipenv
+```
+
+Then install kwtsms:
+
+```bash
 pipenv install kwtsms
 ```
 
