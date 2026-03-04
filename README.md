@@ -126,8 +126,10 @@ kwtsms_python/
 ## Links
 
 - PyPI: https://pypi.org/project/kwtsms
-- kwtSMS API docs: https://www.kwtsms.com/doc/KwtSMS.com_API_Documentation_v41.pdf
-- kwtSMS support: https://kwtsms.com/support.html
+- [kwtSMS API Documentation](https://www.kwtsms.com/doc/KwtSMS.com_API_Documentation_v41.pdf) — kwtSMS API v4.1 (PDF)
+- [kwtSMS FAQ](https://kwtsms.com/faq) — answers to common questions about credits, sender IDs, OTP, and delivery
+- [kwtSMS Support](https://kwtsms.com/support.html) — open a support ticket or browse help articles
+- [Contact kwtSMS](https://kwtsms.com/#contact) — reach the kwtSMS team directly for sender ID registration and account issues
 
 ## License
 
