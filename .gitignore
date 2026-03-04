@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# UV / virtual env
+.venv/
+.python-version
+
+# Build output
+dist/
+build/
+
+# Credentials and logs — never commit these
+.env
+*.env
+kwtsms.log
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.DS_Store
