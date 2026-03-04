@@ -10,7 +10,7 @@ Zero external dependencies. Python 3.8+.
 
 kwtSMS is a Kuwaiti SMS gateway trusted by top businesses to deliver messages anywhere in the world, with private Sender ID, free API testing, non-expiring credits, and competitive flat-rate pricing. Secure, simple to integrate, built to last.
 
-[Open a free account in under 1 minute, no paperwork or payment required.](https://www.kwtsms.com/signup/) 👍
+Open a free account in under 1 minute, no paperwork or payment required. [Click here to get started](https://www.kwtsms.com/signup/) 👍
 
 ---
 
@@ -515,7 +515,7 @@ if result["result"] == "OK":
 ### OTP messages
 
 - Always include your app/company name: `"Your OTP for APPNAME is: 123456"`
-- Wait at least 3 to 4 minutes before allowing resend
+- Wait at least 3–4 minutes before allowing resend
 - Generate a new code on each resend, and invalidate all previous codes
 - Use a **Transactional** sender ID (not Promotional)
 - Send to one number per request (avoid ERR028 in batches)
@@ -538,8 +538,8 @@ Don't show raw API errors to end users:
 Before going live, make sure:
 
 - [ ] CAPTCHA enabled on all forms that trigger SMS (OTP, signup, password reset)
-- [ ] Rate limit per phone number (max 3 to 5 requests/hour)
-- [ ] Rate limit per IP address (max 10 to 20 requests/hour)
+- [ ] Rate limit per phone number (max 3–5 requests/hour)
+- [ ] Rate limit per IP address (max 10–20 requests/hour)
 - [ ] Monitoring/alerting on failed sends and balance depletion
 - [ ] Test mode OFF (`KWTSMS_TEST_MODE=0`)
 - [ ] Private sender ID registered (not `KWT-SMS`)
