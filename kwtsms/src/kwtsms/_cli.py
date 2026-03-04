@@ -168,7 +168,8 @@ def main() -> None:
     if cmd == "verify":
         ok, bal, err = sms.verify()
         if ok:
-            print(f"  Credentials valid  |  Balance: {bal}")
+            purchased = sms._cached_purchased
+            print(f"  Credentials valid  |  Available: {bal}  |  Purchased: {purchased}")
             if sms.test_mode:
                 print("  Mode: TEST (messages will not be delivered)")
         else:
@@ -176,11 +177,12 @@ def main() -> None:
             sys.exit(1)
 
     elif cmd == "balance":
-        bal = sms.balance()
-        if bal is not None:
-            print(f"Balance: {bal}")
+        ok, bal, err = sms.verify()
+        if ok:
+            purchased = sms._cached_purchased
+            print(f"  Available: {bal}  |  Purchased: {purchased}")
         else:
-            print("Could not retrieve balance")
+            print(f"  Could not retrieve balance: {err}")
             sys.exit(1)
 
     elif cmd == "send":

@@ -353,6 +353,7 @@ class KwtSMS:
         self.test_mode = test_mode
         self.log_file = log_file
         self._cached_balance: Optional[float] = None
+        self._cached_purchased: Optional[float] = None
 
     @classmethod
     def from_env(cls, env_file: str = ".env") -> "KwtSMS":
@@ -405,6 +406,7 @@ class KwtSMS:
             data = _request("balance", self._creds(), self.log_file)
             if data.get("result") == "OK":
                 self._cached_balance = float(data.get("available", 0))
+                self._cached_purchased = float(data.get("purchased", 0))
                 return True, self._cached_balance, None
             data = _enrich_error(data)
             description = data.get("description", data.get("code", "Unknown error"))
