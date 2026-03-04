@@ -276,6 +276,19 @@ def _request(endpoint: str, payload: dict, log_file: str = "") -> dict:
             return data
 
     except HTTPError as e:
+        # kwtSMS returns JSON error details (e.g. ERR003) in the 4xx response body.
+        # Try to parse it — if it succeeds, return the JSON dict like a normal error
+        # response instead of raising, so callers get a consistent dict every time.
+        try:
+            body = e.read().decode("utf-8")
+            data = json.loads(body)
+            log_entry["response"] = data
+            log_entry["ok"] = False
+            _write_log(log_file, log_entry)
+            return data
+        except Exception:
+            pass
+        # Body was not JSON — fall back to a plain HTTP error
         err = f"HTTP {e.code}: {e.reason}"
         log_entry["error"] = err
         _write_log(log_file, log_entry)
