@@ -427,6 +427,50 @@ class KwtSMS:
         ok, bal, _ = self.verify()
         return bal if ok else self._cached_balance
 
+    # ── senderids ─────────────────────────────────────────────────────────────
+
+    def senderids(self) -> list:
+        """
+        List sender IDs registered on this account via /senderid/.
+
+        Returns a list of sender ID strings on success.
+        Returns an empty list with an enriched error dict in result["error"]
+        on failure — never raises.
+
+        Example:
+            ids = sms.senderids()
+            # → ["KWT-SMS", "MY-APP"]
+        """
+        try:
+            data = _request("senderid", self._creds(), self.log_file)
+        except RuntimeError:
+            return []
+        if data.get("result") == "OK":
+            return data.get("senderid", [])
+        return []
+
+    # ── coverage ──────────────────────────────────────────────────────────────
+
+    def coverage(self) -> dict:
+        """
+        List active country prefixes via /coverage/.
+
+        Returns the full API response dict. On error the dict includes an
+        'action' field with guidance (ERR033 = no active coverage).
+
+        Example:
+            result = sms.coverage()
+            if result["result"] == "OK":
+                print(result)  # country prefix data
+            else:
+                print(result["action"])
+        """
+        try:
+            data = _request("coverage", self._creds(), self.log_file)
+        except RuntimeError as e:
+            return {"result": "ERROR", "code": "NETWORK", "description": str(e)}
+        return _enrich_error(data)
+
     # ── validate ──────────────────────────────────────────────────────────────
 
     def validate(self, phones: List[str]) -> dict:

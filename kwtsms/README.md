@@ -80,6 +80,31 @@ Returns `(True, float, None)` on success, `(False, None, str)` on failure. Never
 
 ---
 
+### `senderids()` → `list`
+
+Returns the list of sender IDs registered on this account. Returns an empty list on error.
+
+```python
+ids = sms.senderids()
+# → ["KWT-SMS", "MY-APP"]
+```
+
+---
+
+### `coverage()` → `dict`
+
+Returns active country prefixes allowed on this account.
+
+```python
+result = sms.coverage()
+if result["result"] == "OK":
+    print(result["prefixes"])  # → ["965", "966", "971", "973", "974"]
+else:
+    print(result["action"])    # ERR033 = no active coverage, contact kwtSMS
+```
+
+---
+
 ### `balance()` → `float | None`
 
 Returns current balance. Returns `None` on error (does not raise).
@@ -217,8 +242,10 @@ clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
 
 ```bash
 kwtsms setup                                          # first-time wizard
-kwtsms verify                                         # test credentials + show balance
-kwtsms balance                                        # check balance
+kwtsms verify                                         # test credentials + show balance + purchased
+kwtsms balance                                        # check available and purchased credits
+kwtsms senderid                                       # list sender IDs on this account
+kwtsms coverage                                       # list active country prefixes
 kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
 kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
 kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the list (spaces OK inside quotes)

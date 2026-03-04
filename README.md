@@ -74,6 +74,12 @@ if result.get("bulk"):
 # Check balance
 balance = sms.balance()  # also auto-updated after every successful send
 
+# List sender IDs registered on this account
+ids = sms.senderids()   # → ["KWT-SMS", "MY-APP"]
+
+# List active country prefixes
+result = sms.coverage() # → {"result": "OK", "prefixes": ["965", "966", ...]}
+
 # Validate numbers before bulk send
 report = sms.validate(["96598765432", "+96512345678", "abc", "123"])
 # report["ok"]       → valid and routable
@@ -109,8 +115,10 @@ A `kwtsms` command is installed automatically with the package:
 
 ```bash
 kwtsms setup                                          # first-time wizard
-kwtsms verify                                         # test credentials + show balance
-kwtsms balance                                        # check balance
+kwtsms verify                                         # test credentials + show balance + purchased
+kwtsms balance                                        # check available and purchased credits
+kwtsms senderid                                       # list sender IDs on this account
+kwtsms coverage                                       # list active country prefixes
 kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
 kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
 kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the list (spaces OK inside quotes)

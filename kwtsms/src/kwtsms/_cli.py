@@ -7,6 +7,8 @@ Usage:
     kwtsms setup
     kwtsms verify
     kwtsms balance
+    kwtsms senderid
+    kwtsms coverage
     kwtsms send 96598765432 "Your OTP for MYAPP is: 123456"
     kwtsms send 96598765432,96512345678 "Hello!" --sender "MY APP"
     kwtsms validate 96598765432 +96512345678 0096511111111
@@ -139,7 +141,7 @@ def main() -> None:
     args = sys.argv[1:]
     if not args or args[0] in ("-h", "--help"):
         print(__doc__)
-        print("Commands: setup | verify | balance | send <mobile> <message> | validate <numbers...>")
+        print("Commands: setup | verify | balance | senderid | coverage | send <mobile> <message> | validate <numbers...>")
         sys.exit(0)
 
     cmd = args[0].lower()
@@ -241,9 +243,32 @@ def main() -> None:
         if report.get("error"):
             print(f"Error: {report['error']}")
 
+    elif cmd == "senderid":
+        ids = sms.senderids()
+        if ids:
+            print("Sender IDs on this account:")
+            for sid in ids:
+                print(f"  {sid}")
+        else:
+            print("No sender IDs found or could not retrieve list.")
+            sys.exit(1)
+
+    elif cmd == "coverage":
+        result = sms.coverage()
+        if result.get("result") == "OK":
+            prefixes = result.get("prefixes", [])
+            print(f"Active country prefixes ({len(prefixes)}):")
+            for p in prefixes:
+                print(f"  +{p}")
+        else:
+            print(f"  Error: {result.get('description', result.get('code'))}")
+            if result.get("action"):
+                print(f"  Action: {result['action']}")
+            sys.exit(1)
+
     else:
         print(f"Unknown command: {cmd}")
-        print("Commands: setup | verify | balance | send <mobile> <message> | validate <numbers...>")
+        print("Commands: setup | verify | balance | senderid | coverage | send <mobile> <message> | validate <numbers...>")
         sys.exit(1)
 
 
