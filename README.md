@@ -2,7 +2,7 @@
 
 Official Python client for the [kwtSMS API](https://kwtsms.com), the Kuwait SMS gateway.
 
-Send SMS, check balance, validate numbers, and manage SMS flows with zero external dependencies. Python 3.8+.
+Zero external dependencies. Python 3.8+.
 
 ---
 
@@ -10,7 +10,7 @@ Send SMS, check balance, validate numbers, and manage SMS flows with zero extern
 
 kwtSMS is a Kuwaiti SMS gateway trusted by top businesses to deliver messages anywhere in the world, with private Sender ID, free API testing, non-expiring credits, and competitive flat-rate pricing. Secure, simple to integrate, built to last.
 
-Open a free account in under 1 minute. No paperwork or payment required.
+Open a free account in under 1 minute, no paperwork or payment required.
 
 [🚀 Click here to get started](https://www.kwtsms.com/signup/)
 
@@ -18,14 +18,32 @@ Open a free account in under 1 minute. No paperwork or payment required.
 
 ## Prerequisites
 
-You need **Python 3.8 or newer** and **pip** installed.
+You need **Python 3.8 or newer** and **pip** (Python's package manager) installed.
+
+### Check if Python is installed
 
 ```bash
-python3 --version   # check Python
-pip --version        # check pip
+python3 --version
 ```
 
-If Python is not installed: download from https://www.python.org/downloads/
+If you see a version number (e.g., `Python 3.12.3`), you're ready. If not, install Python:
+
+- **All platforms:** Download from https://www.python.org/downloads/
+- **macOS:** `brew install python`
+- **Ubuntu/Debian:** `sudo apt update && sudo apt install python3 python3-pip`
+- **Windows:** Download from https://www.python.org/downloads/. Check "Add Python to PATH" during install
+
+### Check if pip is installed
+
+```bash
+pip --version
+```
+
+If not found, try `pip3 --version`. If still not found:
+
+```bash
+python3 -m ensurepip --upgrade
+```
 
 ---
 
@@ -57,91 +75,202 @@ result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")  # send SMS
 
 ---
 
-## Configuration
+## Setup
 
-Create a `.env` file in your project root:
+Create a `.env` file in your project root (or set the same keys as environment variables):
 
 ```ini
 KWTSMS_USERNAME=your_api_user
 KWTSMS_PASSWORD=your_api_pass
-KWTSMS_SENDER_ID=YOUR-SENDERID   # KWT-SMS for testing only
+KWTSMS_SENDER_ID=YOUR-SENDERID   # use KWT-SMS for testing only
 KWTSMS_TEST_MODE=1                # 1 = test (safe default), 0 = live
-KWTSMS_LOG_FILE=kwtsms.log        # set to "" to disable logging
+KWTSMS_LOG_FILE=kwtsms.log        # JSONL log path, set to "" to disable
 ```
 
-`from_env()` checks environment variables first, then the `.env` file.
-
-First time? Run the setup wizard:
+Or run the interactive setup wizard (verifies credentials and lists your sender IDs):
 
 ```bash
 kwtsms setup
 ```
 
+`from_env()` checks environment variables first, then the `.env` file as fallback.
+
 ---
 
 ## Credential Management
 
-**Never hardcode credentials.** They must be changeable without modifying code.
+**Never hardcode credentials in your source code.** Credentials must be changeable without modifying code or redeploying.
 
 ```python
 # Option 1: Environment variables / .env file (recommended)
 sms = KwtSMS.from_env()
 
-# Option 2: Constructor (for custom config systems)
+# Option 2: Constructor (for custom config systems, DI containers, etc.)
 sms = KwtSMS(
     username="your_api_user",
     password="your_api_pass",
-    sender_id="YOUR-SENDERID",
-    test_mode=False,
-    log_file="kwtsms.log",      # "" to disable
+    sender_id="YOUR-SENDERID",  # default "KWT-SMS" (testing only)
+    test_mode=False,             # default False
+    log_file="kwtsms.log",       # default "kwtsms.log", "" to disable
 )
 ```
 
-**For web apps:** Provide an admin settings page for updating credentials without touching code. Include a "Test Connection" button that calls `verify()`.
+**For web apps and SaaS:** Provide an admin settings page where API credentials can be updated without touching code. Include a "Test Connection" button that calls `verify()`.
 
 **For production:** Use a secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.) and pass credentials to the constructor.
 
 ---
 
-## All methods
+## Methods
+
+### `verify()` → `(ok, balance, error)`
+
+Tests credentials by calling the balance endpoint.
 
 ```python
-sms = KwtSMS.from_env()
-
-# Verify credentials: returns (ok, balance, error), never raises
 ok, balance, error = sms.verify()
+if ok:
+    print(f"Balance: {balance}")   # float
+else:
+    print(error)  # "Authentication error... → Check KWTSMS_USERNAME..."
+```
 
-# Send SMS: single, multiple, or bulk (>200 auto-batched)
+Returns `(True, float, None)` on success, `(False, None, str)` on failure. Never raises.
+
+---
+
+### `send(mobile, message, sender=None)` → `dict`
+
+Send SMS to one or more numbers.
+
+```python
+# Single number
 result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
-result = sms.send(["96598765432", "+96512345678"], "Hello!")
-result = sms.send("96598765432", "Hello", sender="MY-APP")  # override sender
 
-# Check balance, also auto-updated after every successful send
-balance = sms.balance()
+# Multiple numbers (list)
+result = sms.send(["96598765432", "+96512345678", "0096511111111"], "Hello!")
 
-# Validate numbers before bulk send
-report = sms.validate(["96598765432", "+96512345678", "abc"])
-
-# List sender IDs registered on this account
-result = sms.senderids()  # {"result": "OK", "senderids": ["KWT-SMS", "MY-APP"]}
-
-# List active country prefixes
-result = sms.coverage()   # {"result": "OK", "prefixes": ["965", "966", ...]}
+# Override sender ID for this call only
+result = sms.send("96598765432", "Hello", sender="MY-APP")
 ```
 
-**Send OK response:**
+**Phone numbers** are normalized automatically: strips `+`, `00`, spaces, dashes; converts Arabic/Hindi digits to Latin.
+
+**Message text** is cleaned automatically: strips emojis, hidden control characters (BOM, zero-width space, soft hyphen), HTML tags; converts Arabic/Hindi digits to Latin.
+
+**OK response (≤200 numbers):**
 ```python
-{"result": "OK", "msg-id": "f4c841ad...", "numbers": 1, "points-charged": 1, "balance-after": 149, "unix-timestamp": 1741000800}
+{
+    "result":         "OK",
+    "msg-id":         "f4c841adee210f31...",  # save this: needed for status/DLR lookups
+    "numbers":        1,
+    "points-charged": 1,
+    "balance-after":  149,                    # save this: no need to call balance() again
+    "unix-timestamp": 1741000800,             # ⚠ GMT+3 server time, NOT UTC
+}
 ```
 
-**Send ERROR response:**
+**ERROR response:**
 ```python
-{"result": "ERROR", "code": "ERR003", "description": "Authentication error...", "action": "Wrong API username or password..."}
+{
+    "result":      "ERROR",
+    "code":        "ERR003",
+    "description": "Authentication error, username or password are not correct.",
+    "action":      "Wrong API username or password. Check KWTSMS_USERNAME and KWTSMS_PASSWORD...",
+}
 ```
 
-**Mixed valid/invalid input:** invalid numbers reported in `result["invalid"]`, valid numbers still sent.
+**Mixed valid/invalid input**: invalid numbers are reported, not raised:
+```python
+result = sms.send(["96598765432", "abc", "user@gmail.com"], "Hello")
+# result["invalid"] → [
+#   {"input": "abc",            "error": "'abc' is not a valid phone number, no digits found"},
+#   {"input": "user@gmail.com", "error": "'user@gmail.com' is an email address, not a phone number"},
+# ]
+```
 
-**Bulk send (>200 numbers):** same `send()` call, auto-batched. Returns `result["bulk"] = True` with aggregated `msg-ids`, `batches`, `points-charged`.
+**Raises** `RuntimeError` on network/HTTP failure (single send only, bulk captures errors per batch).
+
+---
+
+### Bulk send (>200 numbers)
+
+`send()` detects the count automatically and batches in groups of 200. No special call needed.
+
+```python
+result = sms.send(list_of_1000_numbers, "Hello!")
+
+if result.get("bulk"):
+    print(result["result"])          # "OK", "PARTIAL", or "ERROR"
+    print(result["batches"])         # 5  (number of API calls made)
+    print(result["numbers"])         # 950 (total numbers accepted)
+    print(result["points-charged"])  # 950 (total credits used)
+    print(result["balance-after"])   # balance after last batch
+    print(result["msg-ids"])         # ["abc123", "def456", ...]  one per batch
+    for err in result["errors"]:
+        print(err["batch"], err["code"], err["description"])
+```
+
+- Rate: 0.5s between batches (≤2 req/s)
+- ERR013 (queue full): auto-retries up to 3× with 30s / 60s / 120s backoff
+- `"PARTIAL"` means some batches succeeded and some failed. Check `errors`
+
+---
+
+### `balance()` → `float | None`
+
+Returns current balance. Returns `None` on error (does not raise).
+Also updated automatically after every successful `send()`, so no need to call this after sending.
+
+```python
+bal = sms.balance()
+```
+
+---
+
+### `validate(phones)` → `dict`
+
+Validate phone numbers before sending. Numbers that fail local validation (email, too short, no digits) are rejected before any API call.
+
+```python
+report = sms.validate(["96598765432", "+96512345678", "abc", "123"])
+
+report["ok"]       # ["96598765432", "96512345678"]  : valid and routable
+report["er"]       # ["abc", "123"]                  : format error
+report["nr"]       # []                              : no route for country
+report["rejected"] # [{"input": "abc",  "error": "..."},
+                   #  {"input": "123",  "error": "'123' is too short..."}]
+report["error"]    # None if API call succeeded
+report["raw"]      # full raw API response dict, or None if no API call was made
+```
+
+---
+
+### `senderids()` → `dict`
+
+Returns the sender IDs registered on this account.
+
+```python
+result = sms.senderids()
+if result["result"] == "OK":
+    print(result["senderids"])  # → ["KWT-SMS", "MY-APP"]
+else:
+    print(result["action"])
+```
+
+---
+
+### `coverage()` → `dict`
+
+Returns active country prefixes allowed on this account.
+
+```python
+result = sms.coverage()
+if result["result"] == "OK":
+    print(result["prefixes"])  # → ["965", "966", "971", "973", "974"]
+else:
+    print(result["action"])    # ERR033 = no active coverage, contact kwtSMS
+```
 
 ---
 
@@ -150,12 +279,22 @@ result = sms.coverage()   # {"result": "OK", "prefixes": ["965", "966", ...]}
 ```python
 from kwtsms import normalize_phone, validate_phone_input, clean_message
 
-normalize_phone("+965 9876-5432")      # → "96598765432"
-normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")       # → "96598765432"
+# Normalize a phone number: strips +, 00, spaces, dashes; converts Arabic digits
+normalize_phone("+96598765432")      # → "96598765432"
+normalize_phone("00 965 9876-5432") # → "96598765432"
+normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")     # → "96598765432"
+
+# Validate a phone number: returns (is_valid, error, normalized)
+ok, error, number = validate_phone_input("+96598765432")
+# → (True, None, "96598765432")
 
 ok, error, number = validate_phone_input("user@gmail.com")
 # → (False, "'user@gmail.com' is an email address, not a phone number", "")
 
+ok, error, number = validate_phone_input("123")
+# → (False, "'123' is too short to be a valid phone number (3 digits, minimum is 7)", "123")
+
+# Clean message text: also called automatically inside send()
 clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
 ```
 
@@ -165,20 +304,26 @@ clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
 
 ### Phone numbers
 
-Normalized automatically before every API call: Arabic/Hindi digits converted, all non-digit characters stripped, leading zeros stripped. Numbers must include the country code (e.g., `96598765432` for Kuwait, not `98765432`).
+All phone numbers are normalized automatically before every API call:
+
+1. Arabic/Hindi digits (`٠١٢٣٤٥٦٧٨٩` / `۰۱۲۳۴۵۶۷۸۹`) → Latin (`0123456789`)
+2. All non-digit characters stripped (`+`, spaces, dashes, dots, brackets, etc.)
+3. Leading zeros stripped (handles `00` country code prefix)
+
+Numbers must include the country code (e.g., `96598765432` for Kuwait, not `98765432`).
 
 ### Message text
 
-`send()` calls `clean_message()` automatically. Content that causes silent delivery failure:
+`send()` calls `clean_message()` automatically before every API call. Three types of content cause silent delivery failure (API returns OK, message stuck in queue, credits wasted):
 
-| Content | Effect | Handled |
-|---------|--------|---------|
-| **Emojis** | Stuck in queue, no error, credits wasted | Stripped automatically |
-| **Hidden characters** (BOM, zero-width space, soft hyphen) | Spam filter or queue stuck | Stripped automatically |
-| **Arabic/Hindi digits** (`١٢٣٤`) | OTP codes render inconsistently | Converted to Latin |
+| Content | Effect | What happens |
+|---------|--------|-------------|
+| **Emojis** | Stuck in queue indefinitely, no error returned | Stripped automatically |
+| **Hidden characters** (zero-width space, BOM, soft hyphen) | Spam filter rejection or queue stuck | Stripped automatically |
+| **Arabic/Hindi digits** in body (`١٢٣٤`) | OTP codes may render inconsistently | Converted to Latin automatically |
 | **HTML tags** | ERR027, message rejected | Stripped automatically |
 
-Arabic **letters** are fully supported and NOT stripped.
+Arabic **letters** are fully supported and are NOT stripped.
 
 ---
 
@@ -191,31 +336,43 @@ kwtsms balance                                        # check available and purc
 kwtsms senderid                                       # list sender IDs on this account
 kwtsms coverage                                       # list active country prefixes
 kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
-kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers
-kwtsms send 96598765432 "Hello" --sender "MY APP"    # override sender ID
-kwtsms validate 96598765432 +96512345678              # validate numbers
+kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
+kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the list (spaces OK inside quotes)
+kwtsms send 96598765432 "Hello" --sender MY-APP       # override sender ID
+kwtsms send 96598765432 "Hello" --sender "kwt sms"   # sender ID with spaces: quote it
+kwtsms validate 96598765432 +96512345678 0096511111111
 ```
 
 ---
 
 ## Error handling
 
-Every API error response includes an `action` field:
+Every API error response includes an `action` field with guidance:
 
 ```python
-result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
-if result["result"] != "OK":
-    print(result["code"])        # e.g. "ERR010"
-    print(result["description"]) # "Account balance is zero."
-    print(result["action"])      # "Recharge credits at kwtsms.com."
+try:
+    result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
+except RuntimeError as e:
+    # Network/HTTP failure: log and retry
+    print(f"Network error: {e}")
+else:
+    if result["result"] == "OK":
+        save_to_db(msg_id=result["msg-id"], balance=result["balance-after"])
+    else:
+        print(result["code"])        # e.g. "ERR010"
+        print(result["description"]) # "Account balance is zero."
+        print(result["action"])      # "Recharge credits at kwtsms.com."
 ```
+
+Common error codes:
 
 | Code | Meaning |
 |------|---------|
 | `ERR003` | Wrong username or password |
 | `ERR006` | No valid phone numbers, missing country code |
-| `ERR008` | Sender ID banned or not found (case sensitive) |
+| `ERR008` | Sender ID is banned or not found (case sensitive) |
 | `ERR010` | Zero balance |
+| `ERR011` | Insufficient balance |
 | `ERR025` | Invalid phone number, missing country code |
 | `ERR026` | Country not activated on this account |
 | `ERR028` | Must wait 15s before sending to the same number again |
@@ -223,6 +380,8 @@ if result["result"] != "OK":
 ---
 
 ## Phone number formats
+
+All formats are accepted. Numbers are normalized automatically:
 
 | Input | Sent as |
 |-------|---------|
@@ -232,21 +391,28 @@ if result["result"] != "OK":
 | `965-9876-5432` | `96598765432` |
 | `٩٦٥٩٨٧٦٥٤٣٢` (Arabic digits) | `96598765432` |
 
-Numbers must include the country code. `98765432` (local) will be rejected. Use `96598765432`.
+Numbers must include the country code. `98765432` (local) will be rejected by the API. Use `96598765432`.
 
 ---
 
 ## Test mode
 
-Set `KWTSMS_TEST_MODE=1` to queue messages without delivering them. No credits consumed.
-Messages appear in kwtsms.com → Account → Queue. Delete them to recover credits.
-Switch to `KWTSMS_TEST_MODE=0` before going live.
+Set `KWTSMS_TEST_MODE=1` or `test_mode=True`. Messages are queued but **not delivered**, no credits consumed.
+
+```python
+sms = KwtSMS.from_env()   # KWTSMS_TEST_MODE=1 in .env
+result = sms.send("96598765432", "Test message")
+# Message is queued: visible in kwtsms.com → Account → Queue
+# Delete it from the queue to recover credits
+```
+
+Set `KWTSMS_TEST_MODE=0` before going live.
 
 ---
 
 ## Sender ID
 
-`KWT-SMS` is a shared sender for **testing only**. It can cause delays and is blocked on some Kuwait carriers. Before going live, register a private sender ID on [kwtsms.com](https://kwtsms.com).
+`KWT-SMS` is a shared sender for **testing only**. It can cause delays and is blocked on some Kuwait carriers. Register a private sender ID on [kwtsms.com](https://kwtsms.com) before going live.
 
 **Sender IDs are case sensitive**: `Kuwait` is not the same as `KUWAIT` or `kuwait`.
 
@@ -257,32 +423,80 @@ Switch to `KWTSMS_TEST_MODE=0` before going live.
 | **Speed** | May have delays | Priority delivery |
 | **Cost** | 10 KD one-time | 15 KD one-time |
 
-**For OTP, you must use Transactional**. Promotional sender IDs are silently blocked for DND subscribers and credits are still deducted.
+**For OTP/authentication, you must use a Transactional sender ID.** Using Promotional for OTP means messages to DND numbers are silently blocked and credits are still deducted.
 
 ---
 
 ## Best practices
 
-- **Validate locally before calling the API**: check phone format, country coverage, message length before sending
-- **Cache `coverage()` at startup**: reject unsupported countries locally instead of wasting an API call
-- **Save `msg-id` and `balance-after`** from every send response: you need msg-id for status lookups, and balance-after eliminates extra API calls
-- **OTP messages:** include app name, 3–4 min resend timer, new code on resend, Transactional sender ID
-- **Don't show raw API errors to end users**: show friendly messages ("Please wait before requesting another code") and log the real error for admins
+### Validate locally before calling the API
+
+Don't send invalid data to the API. Validate first to avoid wasted API calls:
+
+```python
+from kwtsms import validate_phone_input, clean_message
+
+# Check phone number before sending
+ok, error, normalized = validate_phone_input(user_input)
+if not ok:
+    show_user_error(error)  # "Phone number is required", "'abc' is not a phone number", etc.
+    return
+
+# Check country is active (cache prefixes at startup)
+if not any(normalized.startswith(p) for p in cached_prefixes):
+    show_user_error("SMS delivery to this country is not available.")
+    return
+
+# Check message is not empty after cleaning
+message = clean_message(user_input_message)
+if not message.strip():
+    show_user_error("Message is empty.")
+    return
+
+result = sms.send(normalized, message)  # only valid input reaches the API
+```
+
+### Save msg-id and balance-after from every send
+
+```python
+if result["result"] == "OK":
+    db.save("sms_balance", result["balance-after"])   # track balance: no extra API call needed
+    db.save_message(msg_id=result["msg-id"], ...)     # needed for status checks later
+```
+
+### OTP messages
+
+- Always include your app/company name: `"Your OTP for APPNAME is: 123456"`
+- Wait at least 3–4 minutes before allowing resend
+- Generate a new code on each resend, and invalidate all previous codes
+- Use a **Transactional** sender ID (not Promotional)
+- Send to one number per request (avoid ERR028 in batches)
+
+### User-facing error messages
+
+Don't show raw API errors to end users:
+
+| Situation | Show to user | Show to admin/logs |
+|-----------|-------------|-------------------|
+| Invalid phone | "Please enter a valid phone number with country code" | The actual validation error |
+| Auth error (ERR003) | "SMS service temporarily unavailable" | Log the error + alert admin |
+| No balance (ERR010/011) | "SMS service temporarily unavailable" | Alert admin to recharge |
+| Rate limited (ERR028) | "Please wait before requesting another code" | Log the rate limit hit |
 
 ---
 
 ## Security checklist
 
-Before going live:
+Before going live, make sure:
 
-- [ ] CAPTCHA on all SMS-triggering forms
-- [ ] Rate limit per phone (max 3–5/hour)
-- [ ] Rate limit per IP (max 10–20/hour)
-- [ ] Monitoring on failed sends and balance depletion
+- [ ] CAPTCHA enabled on all forms that trigger SMS (OTP, signup, password reset)
+- [ ] Rate limit per phone number (max 3–5 requests/hour)
+- [ ] Rate limit per IP address (max 10–20 requests/hour)
+- [ ] Monitoring/alerting on failed sends and balance depletion
 - [ ] Test mode OFF (`KWTSMS_TEST_MODE=0`)
-- [ ] Private sender ID (not `KWT-SMS`)
-- [ ] Transactional sender ID for OTP
-- [ ] Credentials not hardcoded
+- [ ] Private sender ID registered (not `KWT-SMS`)
+- [ ] Transactional sender ID for OTP (not Promotional)
+- [ ] Credentials in `.env` or env vars (not hardcoded)
 
 ---
 
@@ -298,30 +512,45 @@ Before going live:
 - JSONL logging (one line per API call, password always masked, timestamps in UTC)
 
 > **Note:** `unix-timestamp` in API responses is **GMT+3** (Asia/Kuwait server time), not UTC.
+> Log `ts` fields written by this client are always UTC ISO-8601.
+
+---
+
+## Logging
+
+One JSON line per API call written to `kwtsms.log` (or the path in `KWTSMS_LOG_FILE`). Password is always masked.
+
+```json
+{"ts":"2026-03-04T10:00:00+00:00","endpoint":"send","request":{"username":"myuser","password":"***","sender":"MYAPP","mobile":"96598765432","message":"Your OTP is: 123456","test":"0"},"response":{"result":"OK","msg-id":"f4c841ad...","numbers":1,"points-charged":1,"balance-after":149,"unix-timestamp":1741082400},"ok":true,"error":null}
+```
+
+> `ts` is always **UTC**. `unix-timestamp` inside `response` is **GMT+3** (Asia/Kuwait server time).
+
+Set `log_file=""` or `KWTSMS_LOG_FILE=` to disable logging.
 
 ---
 
 ## FAQ
 
-**1. Message sent OK but recipient didn't receive it?**
+**1. My message was sent successfully (result: OK) but the recipient didn't receive it. What happened?**
 
-Check the **Sending Queue** at [kwtsms.com](https://www.kwtsms.com/login/). If stuck there: emoji, hidden characters, or spam filter. Delete from queue to recover credits. Also check `KWTSMS_TEST_MODE=0`.
+Check the **Sending Queue** at [kwtsms.com](https://www.kwtsms.com/login/). If your message is stuck there, it was accepted by the API but not dispatched. Common causes are emoji in the message, hidden characters from copy-pasting, or spam filter triggers. Delete it from the queue to recover your credits. Also verify that `test` mode is off (`KWTSMS_TEST_MODE=0`). Test messages are queued but never delivered.
 
-**2. Test mode vs Live mode?**
+**2. What is the difference between Test mode and Live mode?**
 
-Test mode queues but does NOT deliver. No credits consumed. Switch to `KWTSMS_TEST_MODE=0` for production.
+**Test mode** (`KWTSMS_TEST_MODE=1`) sends your message to the kwtSMS queue but does NOT deliver it to the handset. No SMS credits are consumed. Use this during development. **Live mode** (`KWTSMS_TEST_MODE=0`) delivers the message for real and deducts credits. Always develop in test mode and switch to live only when ready for production.
 
-**3. Why not use "KWT-SMS" in production?**
+**3. What is a Sender ID and why should I not use "KWT-SMS" in production?**
 
-Shared test sender, delays, blocked on Virgin Kuwait. Register your own private Sender ID. Use Transactional for OTP.
+A **Sender ID** is the name that appears as the sender on the recipient's phone (e.g., "MY-APP" instead of a random number). `KWT-SMS` is a shared test sender. It causes delivery delays, is blocked on Virgin Kuwait, and should never be used in production. Register your own private Sender ID through your kwtSMS account. For OTP/authentication messages, you need a **Transactional** Sender ID to bypass DND (Do Not Disturb) filtering.
 
-**4. ERR003 "Authentication error"?**
+**4. I'm getting ERR003 "Authentication error". What's wrong?**
 
-Wrong credentials. Use your **API username/password** (not your account mobile number). Check at kwtsms.com → Account → API.
+You are using the wrong credentials. The API requires your **API username and API password**, NOT your account mobile number. Log in to [kwtsms.com](https://www.kwtsms.com/login/), go to Account → API settings, and check your API credentials. Also make sure you are using POST (not GET) and `Content-Type: application/json`.
 
-**5. Can I send internationally?**
+**5. Can I send to international numbers (outside Kuwait)?**
 
-Disabled by default. Contact kwtSMS support. Use `coverage()` to check active countries. Implement rate limiting before enabling.
+International sending is **disabled by default** on kwtSMS accounts. Contact kwtSMS support to request activation for specific country prefixes. Use `coverage()` to check which countries are currently active on your account. Be aware that activating international coverage increases exposure to automated abuse, so implement rate limiting and CAPTCHA before enabling.
 
 ---
 
@@ -340,13 +569,13 @@ Disabled by default. Contact kwtSMS support. Use `coverage()` to check active co
 
 ```
 kwtsms_python/
-├── kwtsms/          ← installable package (published to PyPI)
-│   ├── src/kwtsms/
-│   │   ├── _core.py     ← KwtSMS class + all logic
-│   │   ├── _cli.py      ← kwtsms CLI command
-│   │   └── __init__.py  ← public exports
-│   └── tests/
-└── docs/            ← design docs, PRD, publish workflow
+├── src/kwtsms/
+│   ├── _core.py      ← KwtSMS class + all logic
+│   ├── _cli.py       ← kwtsms CLI command
+│   └── __init__.py   ← public exports
+├── pyproject.toml
+├── README.md
+└── LICENSE
 ```
 
 ---

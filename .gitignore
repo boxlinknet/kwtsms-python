@@ -22,3 +22,10 @@ kwtsms.log
 .vscode/
 .idea/
 *.DS_Store
+
+# Claude Code config
+CLAUDE.md
+
+# Internal docs and tests (stay local)
+/docs/
+/tests/
