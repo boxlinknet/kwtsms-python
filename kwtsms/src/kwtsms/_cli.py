@@ -108,7 +108,18 @@ def _run_setup(env_file: str = ".env") -> None:
 
     # Log file
     default_log = existing.get("KWTSMS_LOG_FILE", "kwtsms.log")
-    log_file_path = input(f"\nLog file path [{default_log}]: ").strip() or default_log
+    print("\nAPI logging (every API call is logged to a file, passwords are always masked):")
+    if default_log:
+        print(f"  Current: {default_log}")
+    print('  Type "off" to disable logging.')
+    log_input = input(f"  Log file path [{default_log or 'off'}]: ").strip()
+    if log_input.lower() == "off":
+        log_file_path = ""
+        print("  → Logging disabled.")
+    elif log_input:
+        log_file_path = log_input
+    else:
+        log_file_path = default_log
 
     # Write .env
     content = (
