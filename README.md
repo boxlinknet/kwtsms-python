@@ -2,7 +2,7 @@
 
 Official Python client for the [kwtSMS API](https://kwtsms.com) — Kuwait SMS gateway.
 
-Send SMS, check balance, validate numbers, and manage OTP flows with zero external dependencies.
+Send SMS, check balance, validate numbers, and manage SMS flows with zero external dependencies.
 
 ---
 
