@@ -8,9 +8,11 @@ Usage:
     kwtsms verify
     kwtsms balance
     kwtsms send 96598765432 "Your OTP for MYAPP is: 123456"
+    kwtsms send 96598765432,96512345678 "Hello!" --sender "MY APP"
     kwtsms validate 96598765432 +96512345678 0096511111111
 """
 
+import argparse
 import getpass
 import os
 import sys
@@ -182,19 +184,46 @@ def main() -> None:
             sys.exit(1)
 
     elif cmd == "send":
-        if len(args) < 3:
-            print("Usage: kwtsms send <mobile> <message>")
+        parser = argparse.ArgumentParser(
+            prog="kwtsms send",
+            add_help=False,
+            description="Send SMS to one or more numbers.",
+        )
+        parser.add_argument(
+            "mobile",
+            help="Phone number, or multiple numbers separated by commas: 96598765432,96512345678",
+        )
+        parser.add_argument("message", help="Message text (quote if it contains spaces)")
+        parser.add_argument(
+            "--sender",
+            default=None,
+            metavar="SENDER_ID",
+            help='Override sender ID for this send (quote if it contains spaces: --sender "MY APP")',
+        )
+        try:
+            send_args = parser.parse_args(args[1:])
+        except SystemExit:
+            print("Usage: kwtsms send <mobile> <message> [--sender SENDER_ID]")
+            print('       kwtsms send 96598765432,96512345678 "Hello!" --sender "MY APP"')
             sys.exit(1)
-        mobile, message = args[1], " ".join(args[2:])
+
+        numbers = [n.strip() for n in send_args.mobile.split(",") if n.strip()]
+        mobile_arg = numbers if len(numbers) > 1 else numbers[0]
+
         if sms.test_mode:
             print(_TEST_MODE_WARNING)
-        result = sms.send(mobile, message)
+        result = sms.send(mobile_arg, send_args.message, sender=send_args.sender)
+        if result.get("invalid"):
+            for inv in result["invalid"]:
+                print(f"  Skipped: {inv['input']} — {inv['error']}")
         if result.get("result") == "OK":
             print(f"  Sent  |  msg-id: {result.get('msg-id')}  |  balance-after: {result.get('balance-after')}")
             if sms.test_mode:
                 print("  (test send — check kwtsms.com Queue to confirm; delete to recover credits)")
         else:
             print(f"  Failed: {result.get('code')} — {result.get('description')}")
+            if result.get("action"):
+                print(f"  Action: {result.get('action')}")
             sys.exit(1)
 
     elif cmd == "validate":
