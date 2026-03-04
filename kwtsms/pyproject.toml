@@ -1,6 +1,6 @@
 [project]
 name = "kwtsms"
-version = "0.3.0"
+version = "0.4.0"
 description = "Python client for the kwtSMS API (kwtsms.com)"
 readme = "README.md"
 requires-python = ">=3.8"

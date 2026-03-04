@@ -10,14 +10,9 @@ Send SMS, check balance, validate numbers, and manage SMS flows with zero extern
 
 ```bash
 pip install kwtsms
-```
-
-Works with any Python package manager:
-
-```bash
-uv add kwtsms       # uv
-poetry add kwtsms   # poetry
-pipenv install kwtsms  # pipenv
+uv add kwtsms
+poetry add kwtsms
+pipenv install kwtsms
 ```
 
 ## Quick start
@@ -25,7 +20,17 @@ pipenv install kwtsms  # pipenv
 ```python
 from kwtsms import KwtSMS
 
+# Load from .env or environment variables
 sms = KwtSMS.from_env()
+
+# Or construct directly
+sms = KwtSMS(
+    username="your_api_user",
+    password="your_api_pass",
+    sender_id="YOUR-SENDERID",  # default "KWT-SMS" (testing only)
+    test_mode=False,
+    log_file="kwtsms.log",      # set to "" to disable
+)
 
 # Verify credentials
 ok, balance, error = sms.verify()
@@ -33,32 +38,43 @@ ok, balance, error = sms.verify()
 # Send SMS
 result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
 if result["result"] == "OK":
-    msg_id  = result["msg-id"]
-    balance = result["balance-after"]   # no need to call balance() again
+    msg_id  = result["msg-id"]         # save — needed for status/DLR lookups
+    balance = result["balance-after"]  # save — no need to call balance() again
 else:
     print(result["code"])        # e.g. "ERR003"
     print(result["description"]) # human-readable error
-    print(result["action"])      # what to do — e.g. "Check KWTSMS_USERNAME..."
+    print(result["action"])      # what to do — always present on errors
 
 # Override sender ID per call
 result = sms.send("96598765432", "Hello", sender="MY-APP")
 
-# Send to multiple numbers (auto-batches >200)
-result = sms.send(["96598765432", "+96512345678"], "Hello!")
+# Send to multiple numbers — auto-batches >200
+result = sms.send(["96598765432", "+96512345678", "0096511111111"], "Hello!")
 
-# Invalid numbers are reported, not raised
+# Invalid numbers are reported in result["invalid"], not raised
 result = sms.send(["96598765432", "abc", "user@gmail.com"], "Hello")
 # result["invalid"] → [{"input": "abc", "error": "..."}, {"input": "user@gmail.com", ...}]
 
+# Bulk send (>200 numbers) — same call, batched automatically
+result = sms.send(list_of_1000_numbers, "Hello!")
+if result.get("bulk"):
+    print(result["result"])         # "OK", "PARTIAL", or "ERROR"
+    print(result["batches"])        # number of API calls made
+    print(result["numbers"])        # total numbers accepted
+    print(result["points-charged"]) # total credits used
+    print(result["msg-ids"])        # one msg-id per batch
+    print(result["errors"])         # per-batch errors if any
+
 # Check balance
-balance = sms.balance()
+balance = sms.balance()  # also auto-updated after every successful send
 
 # Validate numbers before bulk send
-report = sms.validate(["96598765432", "+96512345678", "123"])
+report = sms.validate(["96598765432", "+96512345678", "abc", "123"])
 # report["ok"]       → valid and routable
-# report["er"]       → format error (API) + locally rejected
+# report["er"]       → format error (API + locally rejected)
 # report["nr"]       → no route for country
 # report["rejected"] → pre-rejected with per-number error messages
+# report["raw"]      → full raw API response
 ```
 
 ## Configuration
@@ -70,10 +86,10 @@ KWTSMS_USERNAME=your_api_user
 KWTSMS_PASSWORD=your_api_pass
 KWTSMS_SENDER_ID=YOUR-SENDERID   # KWT-SMS for testing only
 KWTSMS_TEST_MODE=1                # 1 = test (safe default), 0 = live
-KWTSMS_LOG_FILE=kwtsms.log
+KWTSMS_LOG_FILE=kwtsms.log        # set to "" to disable logging
 ```
 
-Or set the same keys as environment variables. `from_env()` checks env vars first, then the `.env` file.
+`from_env()` checks environment variables first, then the `.env` file.
 
 First time? Run the setup wizard:
 
@@ -87,11 +103,11 @@ A `kwtsms` command is installed automatically with the package:
 
 ```bash
 kwtsms setup                                          # first-time wizard
-kwtsms verify                                         # test credentials
+kwtsms verify                                         # test credentials + show balance
 kwtsms balance                                        # check balance
 kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
 kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
-kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the whole list (spaces OK inside quotes)
+kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the list (spaces OK inside quotes)
 kwtsms send 96598765432 "Hello" --sender MY-APP       # override sender ID
 kwtsms send 96598765432 "Hello" --sender "kwt sms"   # sender ID with spaces — quote it
 kwtsms validate 96598765432 +96512345678              # validate numbers
@@ -106,28 +122,17 @@ All formats are accepted — numbers are normalized automatically before every c
 | `+96598765432` | `96598765432` |
 | `0096598765432` | `96598765432` |
 | `965 9876 5432` | `96598765432` |
+| `965-9876-5432` | `96598765432` |
 | `٩٦٥٩٨٧٦٥٤٣٢` (Arabic digits) | `96598765432` |
-
-## Test mode
-
-Set `KWTSMS_TEST_MODE=1` to queue messages without delivering them. No credits consumed.
-Switch to `0` before going live.
-
-## Sender ID
-
-`KWT-SMS` is a shared sender for **testing only** — it can cause delays and is blocked on
-some Kuwait carriers. Before going live, register a private sender ID on
-[kwtsms.com](https://kwtsms.com). Use a **Transactional** sender ID for OTP messages
-to ensure delivery to DND numbers.
 
 ## Utility functions
 
 ```python
 from kwtsms import normalize_phone, validate_phone_input, clean_message
 
-# Normalize a phone number to digits-only international format
-normalize_phone("+965 9876-5432")   # → "96598765432"
-normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")    # → "96598765432"
+# Normalize a phone number
+normalize_phone("+965 9876-5432")      # → "96598765432"
+normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")       # → "96598765432"
 
 # Validate before sending — returns (is_valid, error, normalized)
 ok, error, number = validate_phone_input("user@gmail.com")
@@ -136,19 +141,55 @@ ok, error, number = validate_phone_input("user@gmail.com")
 ok, error, number = validate_phone_input("+96598765432")
 # → (True, None, "96598765432")
 
-# Clean message text (also called automatically inside send())
+# Clean message text — also called automatically inside send()
 clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
 ```
+
+## Error handling
+
+Every API error response includes an `action` field:
+
+```python
+try:
+    result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
+except RuntimeError as e:
+    # Network/HTTP failure
+    print(f"Network error: {e}")
+else:
+    if result["result"] == "OK":
+        save_to_db(msg_id=result["msg-id"], balance=result["balance-after"])
+    else:
+        print(result["code"])        # e.g. "ERR010"
+        print(result["description"]) # "Account balance is zero."
+        print(result["action"])      # "Top up your kwtSMS account at kwtsms.com."
+```
+
+## Test mode
+
+Set `KWTSMS_TEST_MODE=1` to queue messages without delivering them — no credits consumed.
+Messages appear in kwtsms.com → Account → Queue. Delete them to recover credits.
+Switch to `KWTSMS_TEST_MODE=0` before going live.
+
+## Sender ID
+
+`KWT-SMS` is a shared sender for **testing only** — it can cause delays and is blocked on
+some Kuwait carriers. Before going live, register a private sender ID on
+[kwtsms.com](https://kwtsms.com). Use a **Transactional** sender ID for OTP messages
+to ensure delivery to DND numbers.
 
 ## What's handled automatically
 
 - Phone normalization (strips `+`, `00`, spaces, dashes; converts Arabic/Hindi digits)
-- Input validation (catches emails, empty strings, too short/long before hitting the API)
-- Message cleaning (strips emojis, hidden control characters, HTML tags)
+- Input validation (catches emails, empty strings, too short/long — before the API is called)
+- Message cleaning (strips emojis, hidden control characters, HTML tags; converts Arabic digits)
 - API error enrichment (`action` field added to every error response)
-- Bulk batching (auto-splits lists >200 numbers into batches of 200)
+- Bulk batching (auto-splits lists >200 numbers into batches of 200, 0.5s between batches)
+- ERR013 backoff (queue full — retries 3× at 30s / 60s / 120s automatically)
 - Balance caching (every send response includes `balance-after` — no extra API call needed)
-- JSONL logging (one line per API call, password always masked)
+- JSONL logging (one line per API call, password always masked, timestamps in UTC)
+
+> **Note:** `unix-timestamp` in API responses is **GMT+3** (Asia/Kuwait server time), not UTC.
+> Log `ts` fields written by this client are always UTC ISO-8601.
 
 ## Repository layout
 
