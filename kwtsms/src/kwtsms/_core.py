@@ -33,6 +33,63 @@ def normalize_phone(phone: str) -> str:
     return phone
 
 
+# ── Phone input validation ────────────────────────────────────────────────────
+
+def validate_phone_input(phone: str) -> tuple:
+    """
+    Validate a raw phone number input before sending to the kwtSMS API.
+
+    Returns: (is_valid: bool, error: str | None, normalized: str)
+
+    Catches every common mistake without crashing:
+    - Empty or blank input
+    - Email address entered instead of a phone number
+    - Non-numeric text with no digits (e.g. "abc", "---")
+    - Too short after normalization (< 7 digits)
+    - Too long after normalization (> 15 digits, E.164 maximum)
+
+    Examples:
+        validate_phone_input("+96598765432")   → (True,  None,  "96598765432")
+        validate_phone_input("")               → (False, "Phone number is required", "")
+        validate_phone_input("user@gmail.com") → (False, "'user@gmail.com' is an email address, not a phone number", "")
+        validate_phone_input("abc")            → (False, "'abc' is not a valid phone number — no digits found", "")
+        validate_phone_input("123")            → (False, "'123' is too short ...", "123")
+        validate_phone_input("1234567890123456") → (False, "'123...' is too long ...", "1234567890123456")
+    """
+    raw = str(phone).strip()
+
+    # 1. Empty / blank
+    if not raw:
+        return False, "Phone number is required", ""
+
+    # 2. Email address entered by mistake
+    if "@" in raw:
+        return False, f"'{raw}' is an email address, not a phone number", ""
+
+    # 3. Normalize (Arabic digits → Latin, strip non-digits, strip leading zeros)
+    normalized = normalize_phone(raw)
+
+    # 4. No digits survived normalization (e.g. "abc", "---", "...")
+    if not normalized:
+        return False, f"'{raw}' is not a valid phone number — no digits found", ""
+
+    # 5. Too short — any real phone number is at least 7 digits
+    if len(normalized) < 7:
+        return False, (
+            f"'{raw}' is too short to be a valid phone number "
+            f"({len(normalized)} digit{'s' if len(normalized) != 1 else ''}, minimum is 7)"
+        ), normalized
+
+    # 6. Too long — E.164 international standard allows a maximum of 15 digits
+    if len(normalized) > 15:
+        return False, (
+            f"'{raw}' is too long to be a valid phone number "
+            f"({len(normalized)} digits, maximum is 15)"
+        ), normalized
+
+    return True, None, normalized
+
+
 # ── Message cleaning ──────────────────────────────────────────────────────────
 
 def clean_message(text: str) -> str:
@@ -302,38 +359,65 @@ class KwtSMS:
         """
         Validate and normalize phone numbers via /validate/.
 
+        Numbers that fail local validation (empty, email, too short, too long, no digits)
+        are rejected immediately with a clear error — before any API call is made.
+        Numbers that pass local validation are sent to the kwtSMS /validate/ endpoint.
+
         Returns:
             {
-                "ok":    [...],  # valid and routable
-                "er":    [...],  # format error
-                "nr":    [...],  # no route (country not activated)
-                "raw":   {...},  # full API response
-                "error": None,   # set on network / API error
+                "ok":       [...],  # valid and routable (from API)
+                "er":       [...],  # format error (from API + locally rejected)
+                "nr":       [...],  # no route — country not activated on account
+                "raw":      {...},  # full API response, or None if no API call was made
+                "error":    None,   # set if the entire API call failed
+                "rejected": [...],  # locally rejected numbers with specific error messages
+                                    # e.g. [{"input": "abc", "error": "'abc' is not a valid..."}]
             }
         """
-        normalized = [normalize_phone(str(p)) for p in phones]
-        normalized = [n for n in normalized if n]
+        valid_normalized: List[str] = []
+        pre_rejected: List[dict] = []
 
-        if not normalized:
-            return {"ok": [], "er": [], "nr": [], "raw": None,
-                    "error": "No valid numbers after normalization"}
+        for raw in phones:
+            is_valid, error, normalized = validate_phone_input(str(raw))
+            if is_valid:
+                valid_normalized.append(normalized)
+            else:
+                pre_rejected.append({"input": str(raw), "error": error})
 
-        payload = {**self._creds(), "mobile": ",".join(normalized)}
+        result: dict = {
+            "ok":       [],
+            "er":       [r["input"] for r in pre_rejected],
+            "nr":       [],
+            "raw":      None,
+            "error":    None,
+            "rejected": pre_rejected,
+        }
+
+        if not valid_normalized:
+            result["error"] = (
+                pre_rejected[0]["error"] if len(pre_rejected) == 1
+                else f"All {len(pre_rejected)} phone numbers failed validation"
+            )
+            return result
+
+        payload = {**self._creds(), "mobile": ",".join(valid_normalized)}
         try:
             data = _request("validate", payload, self.log_file)
             if data.get("result") == "OK":
                 mobile = data.get("mobile", {})
-                return {
-                    "ok":    mobile.get("OK", []),
-                    "er":    mobile.get("ER", []),
-                    "nr":    mobile.get("NR", []),
-                    "raw":   data,
-                    "error": None,
-                }
-            return {"ok": [], "er": normalized, "nr": [], "raw": data,
-                    "error": data.get("description")}
+                result["ok"]  = mobile.get("OK", [])
+                result["er"]  = mobile.get("ER", []) + result["er"]
+                result["nr"]  = mobile.get("NR", [])
+                result["raw"] = data
+            else:
+                result["er"]   = valid_normalized + result["er"]
+                result["raw"]  = data
+                result["error"] = data.get("description")
         except RuntimeError as e:
-            return {"ok": [], "er": normalized, "nr": [], "raw": None, "error": str(e)}
+            result["er"]    = valid_normalized + result["er"]
+            result["error"] = str(e)
+
+        return result
 
     # ── send ──────────────────────────────────────────────────────────────────
 
@@ -373,33 +457,50 @@ class KwtSMS:
         """
         effective_sender = sender or self.sender_id
 
-        if isinstance(mobile, list):
-            numbers = [normalize_phone(str(p)) for p in mobile]
+        raw_list = mobile if isinstance(mobile, list) else [mobile]
+
+        valid_numbers: List[str] = []
+        invalid: List[dict] = []
+
+        for raw in raw_list:
+            is_valid, error, normalized = validate_phone_input(str(raw))
+            if is_valid:
+                valid_numbers.append(normalized)
+            else:
+                invalid.append({"input": str(raw), "error": error})
+
+        if not valid_numbers:
+            # Every number failed local validation — return a clear error, never crash
+            description = (
+                invalid[0]["error"] if len(invalid) == 1
+                else f"All {len(invalid)} phone numbers are invalid"
+            )
+            return {
+                "result":      "ERROR",
+                "code":        "ERR_INVALID_INPUT",
+                "description": description,
+                "invalid":     invalid,
+            }
+
+        if len(valid_numbers) > 200:
+            result = self._send_bulk(valid_numbers, message, effective_sender)
         else:
-            numbers = [normalize_phone(str(mobile))]
-        numbers = [n for n in numbers if n]
+            payload = {
+                **self._creds(),
+                "sender":  effective_sender,
+                "mobile":  ",".join(valid_numbers),
+                "message": clean_message(message),
+                "test":    "1" if self.test_mode else "0",
+            }
+            result = _request("send", payload, self.log_file)
+            if result.get("result") == "OK" and "balance-after" in result:
+                self._cached_balance = float(result["balance-after"])
 
-        if not numbers:
-            return {"result": "ERROR", "code": "ERR006",
-                    "description": "No valid numbers after normalization"}
+        # If some numbers were skipped, attach them so the caller knows
+        if invalid:
+            result["invalid"] = invalid
 
-        if len(numbers) > 200:
-            return self._send_bulk(numbers, message, effective_sender)
-
-        payload = {
-            **self._creds(),
-            "sender":  effective_sender,
-            "mobile":  ",".join(numbers),
-            "message": clean_message(message),
-            "test":    "1" if self.test_mode else "0",
-        }
-
-        data = _request("send", payload, self.log_file)
-
-        if data.get("result") == "OK" and "balance-after" in data:
-            self._cached_balance = float(data["balance-after"])
-
-        return data
+        return result
 
     # ── _send_bulk ────────────────────────────────────────────────────────────
 

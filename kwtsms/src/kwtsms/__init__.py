@@ -12,10 +12,10 @@ Quick start:
     balance = sms.balance()
 
 Utility functions:
-    from kwtsms import normalize_phone, clean_message
+    from kwtsms import normalize_phone, clean_message, validate_phone_input
 """
 
-from kwtsms._core import KwtSMS, clean_message, normalize_phone
+from kwtsms._core import KwtSMS, clean_message, normalize_phone, validate_phone_input
 
-__all__ = ["KwtSMS", "normalize_phone", "clean_message"]
+__all__ = ["KwtSMS", "normalize_phone", "clean_message", "validate_phone_input"]
 __version__ = "0.1.0"
