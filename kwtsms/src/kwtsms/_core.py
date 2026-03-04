@@ -1,5 +1,5 @@
 """
-kwtsms._core — kwtSMS API client logic.
+kwtsms._core: kwtSMS API client logic.
 Zero external dependencies. Python 3.8+
 """
 
@@ -27,7 +27,7 @@ SERVER_TIMEZONE = "Asia/Kuwait (GMT+3)"
 _API_ERRORS: dict = {
     "ERR001": "API is disabled on this account. Enable it at kwtsms.com → Account → API.",
     "ERR002": "A required parameter is missing. Check that username, password, sender, mobile, and message are all provided.",
-    "ERR003": "Wrong API username or password. Check KWTSMS_USERNAME and KWTSMS_PASSWORD — these are your API credentials, not your account mobile number.",
+    "ERR003": "Wrong API username or password. Check KWTSMS_USERNAME and KWTSMS_PASSWORD. These are your API credentials, not your account mobile number.",
     "ERR004": "This account does not have API access. Contact kwtSMS support to enable it.",
     "ERR005": "This account is blocked. Contact kwtSMS support.",
     "ERR006": "No valid phone numbers. Make sure each number includes the country code (e.g., 96598765432 for Kuwait, not 98765432).",
@@ -60,7 +60,7 @@ _API_ERRORS: dict = {
 def _enrich_error(data: dict) -> dict:
     """
     Add an 'action' field to API error responses with developer-friendly guidance.
-    Returns a new dict — never mutates the original response.
+    Returns a new dict. Never mutates the original response.
     Has no effect on OK responses.
     """
     if data.get("result") != "ERROR":
@@ -104,7 +104,7 @@ def validate_phone_input(phone: str) -> tuple:
         validate_phone_input("+96598765432")   → (True,  None,  "96598765432")
         validate_phone_input("")               → (False, "Phone number is required", "")
         validate_phone_input("user@gmail.com") → (False, "'user@gmail.com' is an email address, not a phone number", "")
-        validate_phone_input("abc")            → (False, "'abc' is not a valid phone number — no digits found", "")
+        validate_phone_input("abc")            → (False, "'abc' is not a valid phone number, no digits found", "")
         validate_phone_input("123")            → (False, "'123' is too short ...", "123")
         validate_phone_input("1234567890123456") → (False, "'123...' is too long ...", "1234567890123456")
     """
@@ -123,16 +123,16 @@ def validate_phone_input(phone: str) -> tuple:
 
     # 4. No digits survived normalization (e.g. "abc", "---", "...")
     if not normalized:
-        return False, f"'{raw}' is not a valid phone number — no digits found", ""
+        return False, f"'{raw}' is not a valid phone number, no digits found", ""
 
-    # 5. Too short — any real phone number is at least 7 digits
+    # 5. Too short: any real phone number is at least 7 digits
     if len(normalized) < 7:
         return False, (
             f"'{raw}' is too short to be a valid phone number "
             f"({len(normalized)} digit{'s' if len(normalized) != 1 else ''}, minimum is 7)"
         ), normalized
 
-    # 6. Too long — E.164 international standard allows a maximum of 15 digits
+    # 6. Too long: E.164 international standard allows a maximum of 15 digits
     if len(normalized) > 15:
         return False, (
             f"'{raw}' is too long to be a valid phone number "
@@ -148,7 +148,7 @@ def clean_message(text: str) -> str:
     """
     Clean SMS message text before sending to kwtSMS.
 
-    Called automatically by KwtSMS.send() — no manual call needed.
+    Called automatically by KwtSMS.send(). No manual call needed.
 
     Strips content that silently breaks delivery:
     - Arabic-Indic / Extended Arabic-Indic digits → Latin digits
@@ -156,7 +156,7 @@ def clean_message(text: str) -> str:
     - Hidden control characters: BOM, zero-width space, soft hyphen, etc.
     - HTML tags (causes ERR027)
 
-    Does NOT strip Arabic letters — Arabic text is fully supported.
+    Does NOT strip Arabic letters. Arabic text is fully supported.
     """
     # 1. Convert Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) and
     #    Extended Arabic-Indic / Persian digits (۰۱۲۳۴۵۶۷۸۹) to Latin
@@ -223,7 +223,7 @@ def _load_env_file(env_file: str = ".env") -> dict:
 # ── JSONL logger ──────────────────────────────────────────────────────────────
 
 def _write_log(log_file: str, entry: dict) -> None:
-    """Append a JSONL log entry. Never raises — logging must not break main flow."""
+    """Append a JSONL log entry. Never raises. Logging must not break main flow."""
     if not log_file:
         return
     try:
@@ -277,7 +277,7 @@ def _request(endpoint: str, payload: dict, log_file: str = "") -> dict:
 
     except HTTPError as e:
         # kwtSMS returns JSON error details (e.g. ERR003) in the 4xx response body.
-        # Try to parse it — if it succeeds, return the JSON dict like a normal error
+        # Try to parse it: if it succeeds, return the JSON dict like a normal error
         # response instead of raising, so callers get a consistent dict every time.
         try:
             body = e.read().decode("utf-8")
@@ -288,7 +288,7 @@ def _request(endpoint: str, payload: dict, log_file: str = "") -> dict:
             return data
         except Exception:
             pass
-        # Body was not JSON — fall back to a plain HTTP error
+        # Body was not JSON, fall back to a plain HTTP error
         err = f"HTTP {e.code}: {e.reason}"
         log_entry["error"] = err
         _write_log(log_file, log_entry)
@@ -361,13 +361,13 @@ class KwtSMS:
         Load credentials from environment variables, falling back to .env file.
 
         Required env vars:
-            KWTSMS_USERNAME   — API username (not your account phone number)
-            KWTSMS_PASSWORD   — API password
+            KWTSMS_USERNAME   : API username (not your account phone number)
+            KWTSMS_PASSWORD   : API password
 
         Optional env vars:
-            KWTSMS_SENDER_ID  — Sender ID (default: "KWT-SMS", fine for testing)
-            KWTSMS_TEST_MODE  — "1" to queue without delivering (default: "0")
-            KWTSMS_LOG_FILE   — JSONL log path (default: "kwtsms.log")
+            KWTSMS_SENDER_ID  : Sender ID (default: "KWT-SMS", fine for testing)
+            KWTSMS_TEST_MODE  : "1" to queue without delivering (default: "0")
+            KWTSMS_LOG_FILE   : JSONL log path (default: "kwtsms.log")
         """
         file_env = _load_env_file(env_file)
 
@@ -433,7 +433,7 @@ class KwtSMS:
         """
         List sender IDs registered on this account via /senderid/.
 
-        Returns a consistent dict — never raises, never crashes.
+        Returns a consistent dict. Never raises, never crashes.
 
         OK:    {"result": "OK",    "senderids": ["KWT-SMS", "MY-APP"]}
         ERROR: {"result": "ERROR", "code": "ERR003", "description": "...", "action": "..."}
@@ -483,14 +483,14 @@ class KwtSMS:
         Validate and normalize phone numbers via /validate/.
 
         Numbers that fail local validation (empty, email, too short, too long, no digits)
-        are rejected immediately with a clear error — before any API call is made.
+        are rejected immediately with a clear error, before any API call is made.
         Numbers that pass local validation are sent to the kwtSMS /validate/ endpoint.
 
         Returns:
             {
                 "ok":       [...],  # valid and routable (from API)
                 "er":       [...],  # format error (from API + locally rejected)
-                "nr":       [...],  # no route — country not activated on account
+                "nr":       [...],  # no route: country not activated on account
                 "raw":      {...},  # full API response, or None if no API call was made
                 "error":    None,   # set if the entire API call failed
                 "rejected": [...],  # locally rejected numbers with specific error messages
@@ -596,7 +596,7 @@ class KwtSMS:
                 invalid.append({"input": str(raw), "error": error})
 
         if not valid_numbers:
-            # Every number failed local validation — return a clear error, never crash
+            # Every number failed local validation. Return a clear error, never crash
             description = (
                 invalid[0]["error"] if len(invalid) == 1
                 else f"All {len(invalid)} phone numbers are invalid"
@@ -635,7 +635,7 @@ class KwtSMS:
     def _send_bulk(self, numbers: List[str], message: str, sender: str) -> dict:
         """
         Internal: send to >200 pre-normalized numbers in batches of 200.
-        Called automatically by send() — do not call directly.
+        Called automatically by send(). Do not call directly.
 
         Rate: 0.5s between batches (≤ 2 req/sec, within kwtSMS safe limit).
         ERR013 (queue full): retries up to 3× with 30s / 60s / 120s backoff.

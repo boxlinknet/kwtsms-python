@@ -1,5 +1,5 @@
 """
-kwtsms — Python client for the kwtSMS API (kwtsms.com)
+kwtsms: Python client for the kwtSMS API (kwtsms.com)
 
 Quick start:
     from kwtsms import KwtSMS
@@ -18,4 +18,4 @@ Utility functions:
 from kwtsms._core import KwtSMS, clean_message, normalize_phone, validate_phone_input
 
 __all__ = ["KwtSMS", "normalize_phone", "clean_message", "validate_phone_input"]
-__version__ = "0.7.3"
+__version__ = "0.7.4"

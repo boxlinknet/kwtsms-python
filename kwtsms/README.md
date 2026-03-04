@@ -1,6 +1,6 @@
 # kwtsms
 
-Python client for the [kwtSMS API](https://kwtsms.com) — Kuwait SMS gateway.
+Python client for the [kwtSMS API](https://kwtsms.com), a Kuwait SMS gateway.
 
 Zero external dependencies. Python 3.8+.
 
@@ -10,7 +10,7 @@ Zero external dependencies. Python 3.8+.
 
 kwtSMS is a Kuwaiti SMS gateway trusted by top businesses to deliver messages anywhere in the world, with private Sender ID, free API testing, non-expiring credits, and competitive flat-rate pricing. Secure, simple to integrate, built to last.
 
-Open a free account in under 1 minute — no paperwork or payment required.
+Open a free account in under 1 minute, no paperwork or payment required.
 
 [🚀 Click here to get started →](https://www.kwtsms.com/signup/)
 
@@ -31,7 +31,7 @@ If you see a version number (e.g., `Python 3.12.3`), you're ready. If not, insta
 - **All platforms:** Download from https://www.python.org/downloads/
 - **macOS:** `brew install python`
 - **Ubuntu/Debian:** `sudo apt update && sudo apt install python3 python3-pip`
-- **Windows:** Download from https://www.python.org/downloads/ — check "Add Python to PATH" during install
+- **Windows:** Download from https://www.python.org/downloads/. Check "Add Python to PATH" during install
 
 ### Check if pip is installed
 
@@ -162,10 +162,10 @@ result = sms.send("96598765432", "Hello", sender="MY-APP")
 ```python
 {
     "result":         "OK",
-    "msg-id":         "f4c841adee210f31...",  # save this — needed for status/DLR lookups
+    "msg-id":         "f4c841adee210f31...",  # save this: needed for status/DLR lookups
     "numbers":        1,
     "points-charged": 1,
-    "balance-after":  149,                    # save this — no need to call balance() again
+    "balance-after":  149,                    # save this: no need to call balance() again
     "unix-timestamp": 1741000800,             # ⚠ GMT+3 server time, NOT UTC
 }
 ```
@@ -180,16 +180,16 @@ result = sms.send("96598765432", "Hello", sender="MY-APP")
 }
 ```
 
-**Mixed valid/invalid input** — invalid numbers are reported, not raised:
+**Mixed valid/invalid input**: invalid numbers are reported, not raised:
 ```python
 result = sms.send(["96598765432", "abc", "user@gmail.com"], "Hello")
 # result["invalid"] → [
-#   {"input": "abc",            "error": "'abc' is not a valid phone number — no digits found"},
+#   {"input": "abc",            "error": "'abc' is not a valid phone number, no digits found"},
 #   {"input": "user@gmail.com", "error": "'user@gmail.com' is an email address, not a phone number"},
 # ]
 ```
 
-**Raises** `RuntimeError` on network/HTTP failure (single send only — bulk captures errors per batch).
+**Raises** `RuntimeError` on network/HTTP failure (single send only, bulk captures errors per batch).
 
 ---
 
@@ -213,14 +213,14 @@ if result.get("bulk"):
 
 - Rate: 0.5s between batches (≤2 req/s)
 - ERR013 (queue full): auto-retries up to 3× with 30s / 60s / 120s backoff
-- `"PARTIAL"` means some batches succeeded and some failed — check `errors`
+- `"PARTIAL"` means some batches succeeded and some failed. Check `errors`
 
 ---
 
 ### `balance()` → `float | None`
 
 Returns current balance. Returns `None` on error (does not raise).
-Also updated automatically after every successful `send()` — no need to call this after sending.
+Also updated automatically after every successful `send()`, so no need to call this after sending.
 
 ```python
 bal = sms.balance()
@@ -235,9 +235,9 @@ Validate phone numbers before sending. Numbers that fail local validation (email
 ```python
 report = sms.validate(["96598765432", "+96512345678", "abc", "123"])
 
-report["ok"]       # ["96598765432", "96512345678"]  — valid and routable
-report["er"]       # ["abc", "123"]                  — format error
-report["nr"]       # []                              — no route for country
+report["ok"]       # ["96598765432", "96512345678"]  : valid and routable
+report["er"]       # ["abc", "123"]                  : format error
+report["nr"]       # []                              : no route for country
 report["rejected"] # [{"input": "abc",  "error": "..."},
                    #  {"input": "123",  "error": "'123' is too short..."}]
 report["error"]    # None if API call succeeded
@@ -279,12 +279,12 @@ else:
 ```python
 from kwtsms import normalize_phone, validate_phone_input, clean_message
 
-# Normalize a phone number — strips +, 00, spaces, dashes; converts Arabic digits
+# Normalize a phone number: strips +, 00, spaces, dashes; converts Arabic digits
 normalize_phone("+96598765432")      # → "96598765432"
 normalize_phone("00 965 9876-5432") # → "96598765432"
 normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")     # → "96598765432"
 
-# Validate a phone number — returns (is_valid, error, normalized)
+# Validate a phone number: returns (is_valid, error, normalized)
 ok, error, number = validate_phone_input("+96598765432")
 # → (True, None, "96598765432")
 
@@ -294,7 +294,7 @@ ok, error, number = validate_phone_input("user@gmail.com")
 ok, error, number = validate_phone_input("123")
 # → (False, "'123' is too short to be a valid phone number (3 digits, minimum is 7)", "123")
 
-# Clean message text — also called automatically inside send()
+# Clean message text: also called automatically inside send()
 clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
 ```
 
@@ -321,7 +321,7 @@ Numbers must include the country code (e.g., `96598765432` for Kuwait, not `9876
 | **Emojis** | Stuck in queue indefinitely, no error returned | Stripped automatically |
 | **Hidden characters** (zero-width space, BOM, soft hyphen) | Spam filter rejection or queue stuck | Stripped automatically |
 | **Arabic/Hindi digits** in body (`١٢٣٤`) | OTP codes may render inconsistently | Converted to Latin automatically |
-| **HTML tags** | ERR027 — message rejected | Stripped automatically |
+| **HTML tags** | ERR027, message rejected | Stripped automatically |
 
 Arabic **letters** are fully supported and are NOT stripped.
 
@@ -339,7 +339,7 @@ kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
 kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
 kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the list (spaces OK inside quotes)
 kwtsms send 96598765432 "Hello" --sender MY-APP       # override sender ID
-kwtsms send 96598765432 "Hello" --sender "kwt sms"   # sender ID with spaces — quote it
+kwtsms send 96598765432 "Hello" --sender "kwt sms"   # sender ID with spaces: quote it
 kwtsms validate 96598765432 +96512345678 0096511111111
 ```
 
@@ -353,7 +353,7 @@ Every API error response includes an `action` field with guidance:
 try:
     result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
 except RuntimeError as e:
-    # Network/HTTP failure — log and retry
+    # Network/HTTP failure: log and retry
     print(f"Network error: {e}")
 else:
     if result["result"] == "OK":
@@ -369,11 +369,11 @@ Common error codes:
 | Code | Meaning |
 |------|---------|
 | `ERR003` | Wrong username or password |
-| `ERR006` | No valid phone numbers — missing country code |
+| `ERR006` | No valid phone numbers, missing country code |
 | `ERR008` | Sender ID is banned or not found (case sensitive) |
 | `ERR010` | Zero balance |
 | `ERR011` | Insufficient balance |
-| `ERR025` | Invalid phone number — missing country code |
+| `ERR025` | Invalid phone number, missing country code |
 | `ERR026` | Country not activated on this account |
 | `ERR028` | Must wait 15s before sending to the same number again |
 
@@ -381,7 +381,7 @@ Common error codes:
 
 ## Phone number formats
 
-All formats are accepted — numbers are normalized automatically:
+All formats are accepted. Numbers are normalized automatically:
 
 | Input | Sent as |
 |-------|---------|
@@ -391,18 +391,18 @@ All formats are accepted — numbers are normalized automatically:
 | `965-9876-5432` | `96598765432` |
 | `٩٦٥٩٨٧٦٥٤٣٢` (Arabic digits) | `96598765432` |
 
-Numbers must include the country code. `98765432` (local) will be rejected by the API — use `96598765432`.
+Numbers must include the country code. `98765432` (local) will be rejected by the API. Use `96598765432`.
 
 ---
 
 ## Test mode
 
-Set `KWTSMS_TEST_MODE=1` or `test_mode=True` — messages are queued but **not delivered**, no credits consumed.
+Set `KWTSMS_TEST_MODE=1` or `test_mode=True`. Messages are queued but **not delivered**, no credits consumed.
 
 ```python
 sms = KwtSMS.from_env()   # KWTSMS_TEST_MODE=1 in .env
 result = sms.send("96598765432", "Test message")
-# Message is queued — visible in kwtsms.com → Account → Queue
+# Message is queued: visible in kwtsms.com → Account → Queue
 # Delete it from the queue to recover credits
 ```
 
@@ -412,14 +412,14 @@ Set `KWTSMS_TEST_MODE=0` before going live.
 
 ## Sender ID
 
-`KWT-SMS` is a shared sender for **testing only** — it can cause delays and is blocked on some Kuwait carriers. Register a private sender ID on [kwtsms.com](https://kwtsms.com) before going live.
+`KWT-SMS` is a shared sender for **testing only**. It can cause delays and is blocked on some Kuwait carriers. Register a private sender ID on [kwtsms.com](https://kwtsms.com) before going live.
 
-**Sender IDs are case sensitive** — `Kuwait` is not the same as `KUWAIT` or `kuwait`.
+**Sender IDs are case sensitive**: `Kuwait` is not the same as `KUWAIT` or `kuwait`.
 
 | | Promotional | Transactional |
 |--|-------------|---------------|
 | **Use for** | Bulk SMS, marketing, offers | OTP, alerts, notifications |
-| **Delivery to DND numbers** | Blocked — credits lost | Bypasses DND (whitelisted) |
+| **Delivery to DND numbers** | Blocked, credits lost | Bypasses DND (whitelisted) |
 | **Speed** | May have delays | Priority delivery |
 | **Cost** | 10 KD one-time | 15 KD one-time |
 
@@ -431,7 +431,7 @@ Set `KWTSMS_TEST_MODE=0` before going live.
 
 ### Validate locally before calling the API
 
-Don't send invalid data to the API — validate first to avoid wasted API calls:
+Don't send invalid data to the API. Validate first to avoid wasted API calls:
 
 ```python
 from kwtsms import validate_phone_input, clean_message
@@ -460,7 +460,7 @@ result = sms.send(normalized, message)  # only valid input reaches the API
 
 ```python
 if result["result"] == "OK":
-    db.save("sms_balance", result["balance-after"])   # track balance — no extra API call needed
+    db.save("sms_balance", result["balance-after"])   # track balance: no extra API call needed
     db.save_message(msg_id=result["msg-id"], ...)     # needed for status checks later
 ```
 
@@ -468,7 +468,7 @@ if result["result"] == "OK":
 
 - Always include your app/company name: `"Your OTP for APPNAME is: 123456"`
 - Wait at least 3–4 minutes before allowing resend
-- Generate a new code on each resend — invalidate all previous codes
+- Generate a new code on each resend, and invalidate all previous codes
 - Use a **Transactional** sender ID (not Promotional)
 - Send to one number per request (avoid ERR028 in batches)
 
@@ -503,12 +503,12 @@ Before going live, make sure:
 ## What's handled automatically
 
 - Phone normalization (strips `+`, `00`, spaces, dashes; converts Arabic/Hindi digits)
-- Input validation (catches emails, empty strings, too short/long — before the API is called)
+- Input validation (catches emails, empty strings, too short/long, before the API is called)
 - Message cleaning (strips emojis, hidden control characters, HTML tags; converts Arabic digits)
 - API error enrichment (`action` field added to every error response)
 - Bulk batching (auto-splits lists >200 numbers into batches of 200, 0.5s between batches)
-- ERR013 backoff (queue full — retries 3× at 30s / 60s / 120s automatically)
-- Balance caching (every send response includes `balance-after` — no extra API call needed)
+- ERR013 backoff (queue full: retries 3× at 30s / 60s / 120s automatically)
+- Balance caching (every send response includes `balance-after`, no extra API call needed)
 - JSONL logging (one line per API call, password always masked, timestamps in UTC)
 
 > **Note:** `unix-timestamp` in API responses is **GMT+3** (Asia/Kuwait server time), not UTC.
@@ -534,7 +534,7 @@ Set `log_file=""` or `KWTSMS_LOG_FILE=` to disable logging.
 
 **1. My message was sent successfully (result: OK) but the recipient didn't receive it. What happened?**
 
-Check the **Sending Queue** at [kwtsms.com](https://www.kwtsms.com/login/). If your message is stuck there, it was accepted by the API but not dispatched — common causes are emoji in the message, hidden characters from copy-pasting, or spam filter triggers. Delete it from the queue to recover your credits. Also verify that `test` mode is off (`KWTSMS_TEST_MODE=0`) — test messages are queued but never delivered.
+Check the **Sending Queue** at [kwtsms.com](https://www.kwtsms.com/login/). If your message is stuck there, it was accepted by the API but not dispatched. Common causes are emoji in the message, hidden characters from copy-pasting, or spam filter triggers. Delete it from the queue to recover your credits. Also verify that `test` mode is off (`KWTSMS_TEST_MODE=0`). Test messages are queued but never delivered.
 
 **2. What is the difference between Test mode and Live mode?**
 
@@ -542,26 +542,26 @@ Check the **Sending Queue** at [kwtsms.com](https://www.kwtsms.com/login/). If y
 
 **3. What is a Sender ID and why should I not use "KWT-SMS" in production?**
 
-A **Sender ID** is the name that appears as the sender on the recipient's phone (e.g., "MY-APP" instead of a random number). `KWT-SMS` is a shared test sender — it causes delivery delays, is blocked on Virgin Kuwait, and should never be used in production. Register your own private Sender ID through your kwtSMS account. For OTP/authentication messages, you need a **Transactional** Sender ID to bypass DND (Do Not Disturb) filtering.
+A **Sender ID** is the name that appears as the sender on the recipient's phone (e.g., "MY-APP" instead of a random number). `KWT-SMS` is a shared test sender. It causes delivery delays, is blocked on Virgin Kuwait, and should never be used in production. Register your own private Sender ID through your kwtSMS account. For OTP/authentication messages, you need a **Transactional** Sender ID to bypass DND (Do Not Disturb) filtering.
 
 **4. I'm getting ERR003 "Authentication error". What's wrong?**
 
-You are using the wrong credentials. The API requires your **API username and API password** — NOT your account mobile number. Log in to [kwtsms.com](https://www.kwtsms.com/login/), go to Account → API settings, and check your API credentials. Also make sure you are using POST (not GET) and `Content-Type: application/json`.
+You are using the wrong credentials. The API requires your **API username and API password**, NOT your account mobile number. Log in to [kwtsms.com](https://www.kwtsms.com/login/), go to Account → API settings, and check your API credentials. Also make sure you are using POST (not GET) and `Content-Type: application/json`.
 
 **5. Can I send to international numbers (outside Kuwait)?**
 
-International sending is **disabled by default** on kwtSMS accounts. Contact kwtSMS support to request activation for specific country prefixes. Use `coverage()` to check which countries are currently active on your account. Be aware that activating international coverage increases exposure to automated abuse — implement rate limiting and CAPTCHA before enabling.
+International sending is **disabled by default** on kwtSMS accounts. Contact kwtSMS support to request activation for specific country prefixes. Use `coverage()` to check which countries are currently active on your account. Be aware that activating international coverage increases exposure to automated abuse, so implement rate limiting and CAPTCHA before enabling.
 
 ---
 
 ## Help & Support
 
-- **[kwtSMS FAQ](https://www.kwtsms.com/faq/)** — Answers to common questions about credits, sender IDs, OTP, and delivery
-- **[kwtSMS Support](https://www.kwtsms.com/support.html)** — Open a support ticket or browse help articles
-- **[Contact kwtSMS](https://www.kwtsms.com/#contact)** — Reach the kwtSMS team directly for Sender ID registration and account issues
-- **[API Documentation (PDF)](https://www.kwtsms.com/doc/KwtSMS.com_API_Documentation_v41.pdf)** — kwtSMS REST API v4.1 full reference
-- **[kwtSMS Dashboard](https://www.kwtsms.com/login/)** — Recharge credits, buy Sender IDs, view message logs, manage coverage
-- **[Other Integrations](https://www.kwtsms.com/integrations.html)** — Plugins and integrations for other platforms and languages
+- **[kwtSMS FAQ](https://www.kwtsms.com/faq/)**: Answers to common questions about credits, sender IDs, OTP, and delivery
+- **[kwtSMS Support](https://www.kwtsms.com/support.html)**: Open a support ticket or browse help articles
+- **[Contact kwtSMS](https://www.kwtsms.com/#contact)**: Reach the kwtSMS team directly for Sender ID registration and account issues
+- **[API Documentation (PDF)](https://www.kwtsms.com/doc/KwtSMS.com_API_Documentation_v41.pdf)**: kwtSMS REST API v4.1 full reference
+- **[kwtSMS Dashboard](https://www.kwtsms.com/login/)**: Recharge credits, buy Sender IDs, view message logs, manage coverage
+- **[Other Integrations](https://www.kwtsms.com/integrations.html)**: Plugins and integrations for other platforms and languages
 
 ---
 
