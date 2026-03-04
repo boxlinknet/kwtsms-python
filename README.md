@@ -27,8 +27,18 @@ from kwtsms import KwtSMS
 
 sms = KwtSMS.from_env()
 
+# Verify credentials
+ok, balance, error = sms.verify()
+
 # Send SMS
 result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
+if result["result"] == "OK":
+    msg_id  = result["msg-id"]
+    balance = result["balance-after"]   # no need to call balance() again
+else:
+    print(result["code"])        # e.g. "ERR003"
+    print(result["description"]) # human-readable error
+    print(result["action"])      # what to do — e.g. "Check KWTSMS_USERNAME..."
 
 # Override sender ID per call
 result = sms.send("96598765432", "Hello", sender="MY-APP")
@@ -36,15 +46,19 @@ result = sms.send("96598765432", "Hello", sender="MY-APP")
 # Send to multiple numbers (auto-batches >200)
 result = sms.send(["96598765432", "+96512345678"], "Hello!")
 
+# Invalid numbers are reported, not raised
+result = sms.send(["96598765432", "abc", "user@gmail.com"], "Hello")
+# result["invalid"] → [{"input": "abc", "error": "..."}, {"input": "user@gmail.com", ...}]
+
 # Check balance
 balance = sms.balance()
 
-# Verify credentials
-ok, balance, error = sms.verify()
-
 # Validate numbers before bulk send
 report = sms.validate(["96598765432", "+96512345678", "123"])
-# report["ok"] → valid, report["er"] → format error, report["nr"] → no route
+# report["ok"]       → valid and routable
+# report["er"]       → format error (API) + locally rejected
+# report["nr"]       → no route for country
+# report["rejected"] → pre-rejected with per-number error messages
 ```
 
 ## Configuration
@@ -102,10 +116,32 @@ some Kuwait carriers. Before going live, register a private sender ID on
 [kwtsms.com](https://kwtsms.com). Use a **Transactional** sender ID for OTP messages
 to ensure delivery to DND numbers.
 
+## Utility functions
+
+```python
+from kwtsms import normalize_phone, validate_phone_input, clean_message
+
+# Normalize a phone number to digits-only international format
+normalize_phone("+965 9876-5432")   # → "96598765432"
+normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")    # → "96598765432"
+
+# Validate before sending — returns (is_valid, error, normalized)
+ok, error, number = validate_phone_input("user@gmail.com")
+# → (False, "'user@gmail.com' is an email address, not a phone number", "")
+
+ok, error, number = validate_phone_input("+96598765432")
+# → (True, None, "96598765432")
+
+# Clean message text (also called automatically inside send())
+clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
+```
+
 ## What's handled automatically
 
 - Phone normalization (strips `+`, `00`, spaces, dashes; converts Arabic/Hindi digits)
+- Input validation (catches emails, empty strings, too short/long before hitting the API)
 - Message cleaning (strips emojis, hidden control characters, HTML tags)
+- API error enrichment (`action` field added to every error response)
 - Bulk batching (auto-splits lists >200 numbers into batches of 200)
 - Balance caching (every send response includes `balance-after` — no extra API call needed)
 - JSONL logging (one line per API call, password always masked)

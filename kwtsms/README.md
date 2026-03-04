@@ -17,10 +17,35 @@ from kwtsms import KwtSMS
 
 sms = KwtSMS.from_env()                              # reads .env or env vars
 ok, balance, err = sms.verify()                      # test credentials
-result = sms.send("96598765432", "Your OTP is: 123456")  # send SMS
+result = sms.send("96598765432", "Your OTP is: 123456")
 result = sms.send("96598765432", "Hello", sender="MY-APP")  # override sender
-report = sms.validate(["96598765432", "+96512345678"])   # validate numbers
+result = sms.send(["96598765432", "+96512345678"], "Hello!")  # multiple numbers
+
+# Every error response includes an 'action' field with developer guidance
+if result["result"] == "ERROR":
+    print(result["code"])        # e.g. "ERR003"
+    print(result["description"]) # human-readable error
+    print(result["action"])      # what to do next
+
+# Invalid numbers are reported per-number, not raised
+result = sms.send(["96598765432", "abc", "user@gmail.com"], "Hi")
+# result["invalid"] → [{"input": "abc", "error": "..."}, ...]
+
+report = sms.validate(["96598765432", "+96512345678", "123"])
+# report["ok"] → valid, report["er"] → format error, report["nr"] → no route
+# report["rejected"] → pre-rejected with per-number error messages
 balance = sms.balance()
+```
+
+## Utility functions
+
+```python
+from kwtsms import normalize_phone, validate_phone_input, clean_message
+
+normalize_phone("+965 9876-5432")       # → "96598765432"
+validate_phone_input("user@gmail.com")  # → (False, "is an email address...", "")
+validate_phone_input("+96598765432")    # → (True, None, "96598765432")
+clean_message("OTP: ١٢٣٤٥٦ 🎉")       # → "OTP: 123456 "
 ```
 
 ## Configuration
