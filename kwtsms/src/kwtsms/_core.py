@@ -20,6 +20,58 @@ BASE_URL = "https://www.kwtsms.com/API/"
 SERVER_TIMEZONE = "Asia/Kuwait (GMT+3)"
 
 
+# ── API error messages ─────────────────────────────────────────────────────────
+# Maps every kwtSMS error code to a developer-friendly action message.
+# Appended as result["action"] on any ERROR response so callers know what to do.
+
+_API_ERRORS: dict = {
+    "ERR001": "API is disabled on this account. Enable it at kwtsms.com → Account → API.",
+    "ERR002": "A required parameter is missing. Check that username, password, sender, mobile, and message are all provided.",
+    "ERR003": "Wrong API username or password. Check KWTSMS_USERNAME and KWTSMS_PASSWORD — these are your API credentials, not your account mobile number.",
+    "ERR004": "This account does not have API access. Contact kwtSMS support to enable it.",
+    "ERR005": "This account is blocked. Contact kwtSMS support.",
+    "ERR006": "No valid phone numbers were submitted. Numbers must be digits only in international format, e.g. 96598765432.",
+    "ERR007": "More than 200 numbers in a single request. Use send() which batches automatically.",
+    "ERR008": "The sender ID is banned. Use a different registered sender ID.",
+    "ERR009": "Message is empty. Provide a non-empty message text.",
+    "ERR010": "Account balance is zero. Top up your kwtSMS account at kwtsms.com.",
+    "ERR011": "Insufficient balance. Top up your kwtSMS account at kwtsms.com.",
+    "ERR012": "Message is too long (over 6 SMS pages). Shorten your message.",
+    "ERR013": "Send queue is full (1000 messages queued). Wait and retry — send() retries automatically with backoff.",
+    "ERR019": "No delivery reports found for this message.",
+    "ERR020": "Message ID does not exist. Check that you saved the msg-id from the send response.",
+    "ERR021": "No delivery report available for this message yet.",
+    "ERR022": "Delivery reports are not ready. Check again after 24 hours.",
+    "ERR023": "Unknown delivery report error. Contact kwtSMS support.",
+    "ERR024": "Your IP address is not in the API whitelist. Add it at kwtsms.com → Account → API → IP Lockdown, or disable IP lockdown.",
+    "ERR025": "Invalid phone number — non-digit characters detected. Numbers must contain digits only (no +, spaces, or dashes). Use normalize_phone() before sending.",
+    "ERR026": "No route for this country prefix. International sending may not be activated on your account. Contact kwtSMS support to enable the destination country.",
+    "ERR027": "HTML tags are not allowed in the message. Strip all <tags> before sending.",
+    "ERR028": "You must wait at least 15 seconds before sending to the same number again. The entire request was rejected — no credits were consumed.",
+    "ERR029": "Message ID does not exist or is incorrect.",
+    "ERR030": "Message is stuck in the send queue with an error. Delete it from the queue at kwtsms.com → Account → Queue to recover the credits.",
+    "ERR031": "Message rejected: bad language detected.",
+    "ERR032": "Message rejected: spam detected.",
+    "ERR033": "No active coverage found. Contact kwtSMS support.",
+    "ERR_INVALID_INPUT": "One or more phone numbers failed local validation before the API was called. Check the 'invalid' field for per-number details.",
+}
+
+
+def _enrich_error(data: dict) -> dict:
+    """
+    Add an 'action' field to API error responses with developer-friendly guidance.
+    Returns a new dict — never mutates the original response.
+    Has no effect on OK responses.
+    """
+    if data.get("result") != "ERROR":
+        return data
+    code = data.get("code", "")
+    if code in _API_ERRORS:
+        data = dict(data)
+        data["action"] = _API_ERRORS[code]
+    return data
+
+
 # ── Phone normalization ────────────────────────────────────────────────────────
 
 def normalize_phone(phone: str) -> str:
@@ -332,13 +384,20 @@ class KwtSMS:
         """
         Test credentials by calling /balance/.
         Returns: (ok: bool, balance: float | None, error: str | None)
+
+        On failure, error includes both the API description and the action to take,
+        e.g. "Authentication error... → Wrong API username or password. Check KWTSMS_..."
         """
         try:
             data = _request("balance", self._creds(), self.log_file)
             if data.get("result") == "OK":
                 self._cached_balance = float(data.get("available", 0))
                 return True, self._cached_balance, None
-            return False, None, data.get("description", data.get("code", "Unknown error"))
+            data = _enrich_error(data)
+            description = data.get("description", data.get("code", "Unknown error"))
+            action = data.get("action")
+            error = f"{description} → {action}" if action else description
+            return False, None, error
         except RuntimeError as e:
             return False, None, str(e)
 
@@ -410,9 +469,12 @@ class KwtSMS:
                 result["nr"]  = mobile.get("NR", [])
                 result["raw"] = data
             else:
-                result["er"]   = valid_normalized + result["er"]
-                result["raw"]  = data
-                result["error"] = data.get("description")
+                data = _enrich_error(data)
+                result["er"]    = valid_normalized + result["er"]
+                result["raw"]   = data
+                result["error"] = data.get("description", data.get("code"))
+                if data.get("action"):
+                    result["error"] = f"{result['error']} → {data['action']}"
         except RuntimeError as e:
             result["er"]    = valid_normalized + result["er"]
             result["error"] = str(e)
@@ -475,12 +537,12 @@ class KwtSMS:
                 invalid[0]["error"] if len(invalid) == 1
                 else f"All {len(invalid)} phone numbers are invalid"
             )
-            return {
+            return _enrich_error({
                 "result":      "ERROR",
                 "code":        "ERR_INVALID_INPUT",
                 "description": description,
                 "invalid":     invalid,
-            }
+            })
 
         if len(valid_numbers) > 200:
             result = self._send_bulk(valid_numbers, message, effective_sender)
@@ -495,6 +557,8 @@ class KwtSMS:
             result = _request("send", payload, self.log_file)
             if result.get("result") == "OK" and "balance-after" in result:
                 self._cached_balance = float(result["balance-after"])
+            else:
+                result = _enrich_error(result)
 
         # If some numbers were skipped, attach them so the caller knows
         if invalid:
