@@ -18,9 +18,7 @@ Open a free account in under 1 minute, no paperwork or payment required.
 
 ## Prerequisites
 
-You need **Python 3.8 or newer** and **pip** (Python's package manager) installed.
-
-### Check if Python is installed
+You need **Python 3.8 or newer** installed.
 
 ```bash
 python3 --version
@@ -32,18 +30,6 @@ If you see a version number (e.g., `Python 3.12.3`), you're ready. If not, insta
 - **macOS:** `brew install python`
 - **Ubuntu/Debian:** `sudo apt update && sudo apt install python3 python3-pip`
 - **Windows:** Download from https://www.python.org/downloads/. Check "Add Python to PATH" during install
-
-### Check if pip is installed
-
-```bash
-pip --version
-```
-
-If not found, try `pip3 --version`. If still not found:
-
-```bash
-python3 -m ensurepip --upgrade
-```
 
 ---
 
@@ -531,7 +517,7 @@ if result["result"] == "OK":
 ### OTP messages
 
 - Always include your app/company name: `"Your OTP for APPNAME is: 123456"`
-- Wait at least 3–4 minutes before allowing resend
+- Wait at least 3 to 4 minutes before allowing resend
 - Generate a new code on each resend, and invalidate all previous codes
 - Use a **Transactional** sender ID (not Promotional)
 - Send to one number per request (avoid ERR028 in batches)
@@ -554,8 +540,8 @@ Don't show raw API errors to end users:
 Before going live, make sure:
 
 - [ ] CAPTCHA enabled on all forms that trigger SMS (OTP, signup, password reset)
-- [ ] Rate limit per phone number (max 3–5 requests/hour)
-- [ ] Rate limit per IP address (max 10–20 requests/hour)
+- [ ] Rate limit per phone number (max 3 to 5 requests/hour)
+- [ ] Rate limit per IP address (max 10 to 20 requests/hour)
 - [ ] Monitoring/alerting on failed sends and balance depletion
 - [ ] Test mode OFF (`KWTSMS_TEST_MODE=0`)
 - [ ] Private sender ID registered (not `KWT-SMS`)
@@ -638,6 +624,7 @@ kwtsms_python/
 │   ├── _cli.py       ← kwtsms CLI command
 │   └── __init__.py   ← public exports
 ├── pyproject.toml
+├── uv.lock
 ├── README.md
 └── LICENSE
 ```
