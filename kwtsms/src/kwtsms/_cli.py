@@ -200,6 +200,8 @@ def main() -> None:
             metavar="SENDER_ID",
             help='Override sender ID for this send (quote if it contains spaces: --sender "MY APP")',
         )
+        # Suppress argparse's own error output — we print our own usage instead
+        parser.error = lambda msg: (_ for _ in ()).throw(SystemExit(2))
         try:
             send_args = parser.parse_args(args[1:])
         except SystemExit:
