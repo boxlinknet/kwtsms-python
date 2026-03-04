@@ -44,7 +44,7 @@ _API_ERRORS: dict = {
     "ERR022": "Delivery reports are not ready. Check again after 24 hours.",
     "ERR023": "Unknown delivery report error. Contact kwtSMS support.",
     "ERR024": "Your IP address is not in the API whitelist. Add it at kwtsms.com → Account → API → IP Lockdown, or disable IP lockdown.",
-    "ERR025": "Invalid phone number — non-digit characters detected. Numbers must contain digits only (no +, spaces, or dashes). Use normalize_phone() before sending.",
+    "ERR025": "Invalid phone number. Make sure the number includes the country code in international format (e.g., 96598765432 for Kuwait, not 98765432). Digits only — no leading zeros, no +, spaces, or dashes.",
     "ERR026": "No route for this country prefix. International sending may not be activated on your account. Contact kwtSMS support to enable the destination country.",
     "ERR027": "HTML tags are not allowed in the message. Strip all <tags> before sending.",
     "ERR028": "You must wait at least 15 seconds before sending to the same number again. The entire request was rejected — no credits were consumed.",
