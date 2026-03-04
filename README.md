@@ -86,11 +86,15 @@ kwtsms setup
 A `kwtsms` command is installed automatically with the package:
 
 ```bash
-kwtsms setup                                     # first-time wizard
-kwtsms verify                                    # test credentials
-kwtsms balance                                   # check balance
-kwtsms send 96598765432 "Your OTP is: 123456"   # send SMS
-kwtsms validate 96598765432 +96512345678         # validate numbers
+kwtsms setup                                          # first-time wizard
+kwtsms verify                                         # test credentials
+kwtsms balance                                        # check balance
+kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
+kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
+kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the whole list (spaces OK inside quotes)
+kwtsms send 96598765432 "Hello" --sender MY-APP       # override sender ID
+kwtsms send 96598765432 "Hello" --sender "kwt sms"   # sender ID with spaces — quote it
+kwtsms validate 96598765432 +96512345678              # validate numbers
 ```
 
 ## Phone number formats
