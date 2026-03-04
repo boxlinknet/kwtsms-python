@@ -78,7 +78,7 @@ def _run_setup(env_file: str = ".env") -> None:
 
     if senderids:
         print("OK")
-        print("\nAvailable Sender IDs:")
+        print("\nAvailable Sender IDs (case sensitive — \"Kuwait\" is not the same as \"KUWAIT\"):")
         for i, sid in enumerate(senderids, 1):
             print(f"  {i}. {sid}")
         default_sid = existing.get("KWTSMS_SENDER_ID", senderids[0])
@@ -90,6 +90,7 @@ def _run_setup(env_file: str = ".env") -> None:
     else:
         print("(none returned)")
         default_sid = existing.get("KWTSMS_SENDER_ID", "KWT-SMS")
+        print("\nNote: Sender ID is case sensitive — \"Kuwait\" is not the same as \"KUWAIT\".")
         sender_id = input(f"Sender ID [{default_sid}]: ").strip() or default_sid
 
     # Send mode

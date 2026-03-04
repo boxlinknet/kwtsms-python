@@ -32,7 +32,7 @@ _API_ERRORS: dict = {
     "ERR005": "This account is blocked. Contact kwtSMS support.",
     "ERR006": "No valid phone numbers. Make sure each number includes the country code (e.g., 96598765432 for Kuwait, not 98765432).",
     "ERR007": "Too many numbers in a single request (maximum 200). Split into smaller batches.",
-    "ERR008": "This sender ID is banned. Use a different sender ID registered on your kwtSMS account.",
+    "ERR008": "This sender ID is banned or not found. Sender IDs are case sensitive (\"Kuwait\" is not the same as \"KUWAIT\"). Check your registered sender IDs at kwtsms.com.",
     "ERR009": "Message is empty. Provide a non-empty message text.",
     "ERR010": "Account balance is zero. Recharge credits at kwtsms.com.",
     "ERR011": "Insufficient balance for this send. Buy more credits at kwtsms.com.",
