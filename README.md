@@ -10,9 +10,7 @@ Zero external dependencies. Python 3.8+.
 
 kwtSMS is a Kuwaiti SMS gateway trusted by top businesses to deliver messages anywhere in the world, with private Sender ID, free API testing, non-expiring credits, and competitive flat-rate pricing. Secure, simple to integrate, built to last.
 
-Open a free account in under 1 minute, no paperwork or payment required.
-
-[🚀 Click here to get started](https://www.kwtsms.com/signup/)
+[Open a free account in under 1 minute, no paperwork or payment required.](https://www.kwtsms.com/signup/) 👍
 
 ---
 
