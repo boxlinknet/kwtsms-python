@@ -12,7 +12,7 @@ kwtSMS is a Kuwaiti SMS gateway trusted by top businesses to deliver messages an
 
 Open a free account in under 1 minute. No paperwork or payment required.
 
-[🚀 Click here to get started →](https://www.kwtsms.com/signup/)
+[🚀 Click here to get started](https://www.kwtsms.com/signup/)
 
 ---
 
