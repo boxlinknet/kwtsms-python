@@ -218,7 +218,11 @@ def main() -> None:
 
         if sms.test_mode:
             print(_TEST_MODE_WARNING)
-        result = sms.send(mobile_arg, send_args.message, sender=send_args.sender)
+        try:
+            result = sms.send(mobile_arg, send_args.message, sender=send_args.sender)
+        except RuntimeError as e:
+            print(f"  Network error: {e}")
+            sys.exit(1)
         if result.get("invalid"):
             for inv in result["invalid"]:
                 print(f"  Skipped: {inv['input']} — {inv['error']}")
@@ -240,17 +244,26 @@ def main() -> None:
         print(f"Valid    (OK): {report['ok']}")
         print(f"Invalid  (ER): {report['er']}")
         print(f"No route (NR): {report['nr']}")
+        if report.get("rejected"):
+            for r in report["rejected"]:
+                print(f"  Rejected: {r['input']} — {r['error']}")
         if report.get("error"):
-            print(f"Error: {report['error']}")
+            print(f"  Error: {report['error']}")
 
     elif cmd == "senderid":
-        ids = sms.senderids()
-        if ids:
-            print("Sender IDs on this account:")
-            for sid in ids:
-                print(f"  {sid}")
+        result = sms.senderids()
+        if result["result"] == "OK":
+            ids = result["senderids"]
+            if ids:
+                print("Sender IDs on this account:")
+                for sid in ids:
+                    print(f"  {sid}")
+            else:
+                print("No sender IDs registered on this account.")
         else:
-            print("No sender IDs found or could not retrieve list.")
+            print(f"  Error: {result.get('description', result.get('code'))}")
+            if result.get("action"):
+                print(f"  Action: {result['action']}")
             sys.exit(1)
 
     elif cmd == "coverage":

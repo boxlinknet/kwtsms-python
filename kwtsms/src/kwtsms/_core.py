@@ -429,25 +429,30 @@ class KwtSMS:
 
     # ── senderids ─────────────────────────────────────────────────────────────
 
-    def senderids(self) -> list:
+    def senderids(self) -> dict:
         """
         List sender IDs registered on this account via /senderid/.
 
-        Returns a list of sender ID strings on success.
-        Returns an empty list with an enriched error dict in result["error"]
-        on failure — never raises.
+        Returns a consistent dict — never raises, never crashes.
+
+        OK:    {"result": "OK",    "senderids": ["KWT-SMS", "MY-APP"]}
+        ERROR: {"result": "ERROR", "code": "ERR003", "description": "...", "action": "..."}
 
         Example:
-            ids = sms.senderids()
-            # → ["KWT-SMS", "MY-APP"]
+            result = sms.senderids()
+            if result["result"] == "OK":
+                print(result["senderids"])
+            else:
+                print(result["action"])
         """
         try:
             data = _request("senderid", self._creds(), self.log_file)
-        except RuntimeError:
-            return []
+        except RuntimeError as e:
+            return {"result": "ERROR", "code": "NETWORK", "description": str(e),
+                    "action": "Check your internet connection and try again."}
         if data.get("result") == "OK":
-            return data.get("senderid", [])
-        return []
+            return {"result": "OK", "senderids": data.get("senderid", [])}
+        return _enrich_error(data)
 
     # ── coverage ──────────────────────────────────────────────────────────────
 
