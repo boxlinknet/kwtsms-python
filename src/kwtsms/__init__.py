@@ -13,10 +13,10 @@ Quick start:
     delivery = sms.status(result["msg-id"])                  # delivery report
 
 Utility functions:
-    from kwtsms import normalize_phone, clean_message, validate_phone_input
+    from kwtsms import normalize_phone, clean_message, validate_phone_input, parse_webhook
 """
 
-from kwtsms._core import KwtSMS, clean_message, normalize_phone, validate_phone_input
+from kwtsms._core import KwtSMS, clean_message, normalize_phone, validate_phone_input, parse_webhook
 
-__all__ = ["KwtSMS", "normalize_phone", "clean_message", "validate_phone_input"]
-__version__ = "0.7.21"
+__all__ = ["KwtSMS", "normalize_phone", "clean_message", "validate_phone_input", "parse_webhook"]
+__version__ = "0.7.22"

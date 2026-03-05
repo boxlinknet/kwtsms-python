@@ -225,6 +225,40 @@ def clean_message(text: str) -> str:
     return text
 
 
+# ── Webhook parser ────────────────────────────────────────────────────────────
+
+def parse_webhook(payload) -> dict:
+    """
+    Parse a kwtSMS delivery receipt webhook payload.
+
+    kwtSMS POSTs delivery receipts to your webhook URL as a JSON body.
+    Pass the parsed JSON dict to this function.
+
+    Returns:
+        ok=True:  {"ok": True, "msg_id": "...", "phone": "...",
+                   "status": "DELIVERED", "delivered_at": 1700000000, "raw": {...}}
+        ok=False: {"ok": False, "error": "..."}
+
+    Known status values: DELIVERED, FAILED, PENDING, REJECTED
+    """
+    if not isinstance(payload, dict):
+        return {"ok": False, "error": "Payload must be a JSON object (dict)"}
+
+    required = ("msg-id", "status")
+    for field in required:
+        if field not in payload:
+            return {"ok": False, "error": f"Missing required field: {field!r}"}
+
+    return {
+        "ok":           True,
+        "msg_id":       payload.get("msg-id"),
+        "phone":        payload.get("mobile", ""),
+        "status":       payload.get("status"),
+        "delivered_at": payload.get("delivered-at"),
+        "raw":          payload,
+    }
+
+
 # ── .env loader ───────────────────────────────────────────────────────────────
 
 def _load_env_file(env_file: str = ".env") -> dict:

@@ -11,6 +11,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.22] - 2026-03-05
+
+### Added
+- `parse_webhook()` module-level function: parses kwtSMS delivery receipt webhook payloads, returning a clean dict with snake_case keys (`msg_id`, `phone`, `status`, `delivered_at`)
+- `tests/test_webhook.py`: seven tests covering valid payload, missing required fields, non-dict input, all known status values, and unknown status passthrough
+- `parse_webhook` exported from top-level `kwtsms` package
+
+---
+
 ## [0.7.21] - 2026-03-05
 
 ### Added
