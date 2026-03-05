@@ -153,8 +153,8 @@ sms = KwtSMS.from_env()
 
 # Option 2: Constructor (for custom config systems, DI containers, etc.)
 sms = KwtSMS(
-    username="your_api_user",
-    password="your_api_pass",
+    username="python_username",
+    password="python_password",
     sender_id="YOUR-SENDERID",  # default "KWT-SMS" (testing only)
     test_mode=False,             # default False
     log_file="kwtsms.log",       # default "kwtsms.log", "" to disable
@@ -567,7 +567,7 @@ Before going live, make sure:
 One JSON line per API call written to `kwtsms.log` (or the path in `KWTSMS_LOG_FILE`). Password is always masked.
 
 ```json
-{"ts":"2026-03-04T10:00:00+00:00","endpoint":"send","request":{"username":"myuser","password":"***","sender":"MYAPP","mobile":"96598765432","message":"Your OTP is: 123456","test":"0"},"response":{"result":"OK","msg-id":"f4c841ad...","numbers":1,"points-charged":1,"balance-after":149,"unix-timestamp":1741082400},"ok":true,"error":null}
+{"ts":"2026-03-04T10:00:00+00:00","endpoint":"send","request":{"username":"python_username","password":"***","sender":"MYAPP","mobile":"96598765432","message":"Your OTP is: 123456","test":"0"},"response":{"result":"OK","msg-id":"f4c841ad...","numbers":1,"points-charged":1,"balance-after":149,"unix-timestamp":1741082400},"ok":true,"error":null}
 ```
 
 > `ts` is always **UTC**. `unix-timestamp` inside `response` is **GMT+3** (Asia/Kuwait server time).
