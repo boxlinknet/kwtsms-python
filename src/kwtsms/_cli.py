@@ -134,6 +134,7 @@ def _run_setup(env_file: str = ".env") -> None:
     try:
         with open(env_file, "w", encoding="utf-8") as f:
             f.write(content)
+        os.chmod(env_file, 0o600)   # owner read/write only: never world-readable
     except OSError as e:
         print(f"\nError writing {env_file}: {e}")
         sys.exit(1)
@@ -181,7 +182,7 @@ def main() -> None:
     if cmd == "verify":
         ok, bal, err = sms.verify()
         if ok:
-            purchased = sms._cached_purchased
+            purchased = sms.purchased
             print(f"  Credentials valid  |  Available: {bal}  |  Purchased: {purchased}")
             if sms.test_mode:
                 print("  Mode: TEST (messages will not be delivered)")
@@ -192,7 +193,7 @@ def main() -> None:
     elif cmd == "balance":
         ok, bal, err = sms.verify()
         if ok:
-            purchased = sms._cached_purchased
+            purchased = sms.purchased
             print(f"  Available: {bal}  |  Purchased: {purchased}")
         else:
             print(f"  Could not retrieve balance: {err}")

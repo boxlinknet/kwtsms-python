@@ -142,6 +142,38 @@ def validate_phone_input(phone: str) -> tuple:
     return True, None, normalized
 
 
+# ── Message cleaning helpers (module-level to avoid per-call redefinition) ────
+
+# Hidden / invisible characters that break SMS delivery
+_HIDDEN_CHARS: frozenset = frozenset({
+    '\u200B',  # zero-width space
+    '\u200C',  # zero-width non-joiner
+    '\u200D',  # zero-width joiner
+    '\u2060',  # word joiner
+    '\u00AD',  # soft hyphen
+    '\uFEFF',  # BOM / zero-width no-break space
+    '\uFFFC',  # object replacement character
+})
+
+
+def _char_is_sms_safe(cp: int) -> bool:
+    """Return False for emoji and pictographic codepoints that break SMS delivery."""
+    return not (
+        0x1F600 <= cp <= 0x1F64F
+        or 0x1F300 <= cp <= 0x1F5FF
+        or 0x1F680 <= cp <= 0x1F6FF
+        or 0x1F700 <= cp <= 0x1F77F
+        or 0x1F780 <= cp <= 0x1F7FF
+        or 0x1F800 <= cp <= 0x1F8FF
+        or 0x1F900 <= cp <= 0x1F9FF
+        or 0x1FA00 <= cp <= 0x1FA6F
+        or 0x1FA70 <= cp <= 0x1FAFF
+        or 0x2600 <= cp <= 0x26FF
+        or 0x2700 <= cp <= 0x27BF
+        or 0xFE00 <= cp <= 0xFE0F
+    )
+
+
 # ── Message cleaning ──────────────────────────────────────────────────────────
 
 def clean_message(text: str) -> str:
@@ -166,32 +198,14 @@ def clean_message(text: str) -> str:
         '01234567890123456789'
     ))
 
-    # 2. Strip HTML tags
+    # 2. Strip HTML tags. [^>] matches \n so multi-line tags are also stripped.
     text = re.sub(r'<[^>]+>', '', text)
 
     # 3. Remove emojis and pictographic characters across major Unicode ranges
-    def _is_safe(char: str) -> bool:
-        cp = ord(char)
-        return not (
-            0x1F600 <= cp <= 0x1F64F
-            or 0x1F300 <= cp <= 0x1F5FF
-            or 0x1F680 <= cp <= 0x1F6FF
-            or 0x1F700 <= cp <= 0x1F77F
-            or 0x1F780 <= cp <= 0x1F7FF
-            or 0x1F800 <= cp <= 0x1F8FF
-            or 0x1F900 <= cp <= 0x1F9FF
-            or 0x1FA00 <= cp <= 0x1FA6F
-            or 0x1FA70 <= cp <= 0x1FAFF
-            or 0x2600 <= cp <= 0x26FF
-            or 0x2700 <= cp <= 0x27BF
-            or 0xFE00 <= cp <= 0xFE0F
-        )
-
-    text = ''.join(c for c in text if _is_safe(c))
+    text = ''.join(c for c in text if _char_is_sms_safe(ord(c)))
 
     # 4. Strip specific hidden / invisible characters by codepoint
-    HIDDEN = {'\u200B', '\u200C', '\u200D', '\u2060', '\u00AD', '\uFEFF', '\uFFFC'}
-    text = ''.join(c for c in text if c not in HIDDEN)
+    text = ''.join(c for c in text if c not in _HIDDEN_CHARS)
 
     # 5. Strip remaining Unicode control characters (Cc/Cf),
     #    preserving \n and \t which SMS supports
@@ -214,7 +228,11 @@ def _load_env_file(env_file: str = ".env") -> dict:
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     key, _, value = line.partition("=")
-                    env[key.strip()] = value.strip().strip('"').strip("'")
+                    val = value.strip()
+                    # Strip one matching outer quote pair only (prevents mixed-quote corruption)
+                    if len(val) >= 2 and val[0] == val[-1] and val[0] in ('"', "'"):
+                        val = val[1:-1]
+                    env[key.strip()] = val
     except FileNotFoundError:
         pass
     return env
@@ -280,8 +298,8 @@ def _request(endpoint: str, payload: dict, log_file: str = "") -> dict:
         # Try to parse it: if it succeeds, return the JSON dict like a normal error
         # response instead of raising, so callers get a consistent dict every time.
         try:
-            body = e.read().decode("utf-8")
-            data = json.loads(body)
+            err_body = e.read().decode("utf-8")
+            data = json.loads(err_body)
             log_entry["response"] = data
             log_entry["ok"] = False
             _write_log(log_file, log_entry)
@@ -372,7 +390,15 @@ class KwtSMS:
         file_env = _load_env_file(env_file)
 
         def get(key: str, default: str = "") -> str:
-            return os.environ.get(key) or file_env.get(key) or default
+            # Use `is not None` so an explicit empty string (e.g. KWTSMS_LOG_FILE="")
+            # is honored rather than falling through to the .env value or default.
+            val = os.environ.get(key)
+            if val is not None:
+                return val
+            val = file_env.get(key)
+            if val is not None:
+                return val
+            return default
 
         username  = get("KWTSMS_USERNAME")
         password  = get("KWTSMS_PASSWORD")
@@ -388,6 +414,11 @@ class KwtSMS:
             raise ValueError(f"Missing credentials: {', '.join(missing)}")
 
         return cls(username, password, sender_id, test_mode, log_file)
+
+    @property
+    def purchased(self) -> Optional[float]:
+        """Purchased balance as returned by the last verify() or balance() call. None before first call."""
+        return self._cached_purchased
 
     def _creds(self) -> dict:
         return {"username": self.username, "password": self.password}
@@ -473,7 +504,8 @@ class KwtSMS:
         try:
             data = _request("coverage", self._creds(), self.log_file)
         except RuntimeError as e:
-            return {"result": "ERROR", "code": "NETWORK", "description": str(e)}
+            return {"result": "ERROR", "code": "NETWORK", "description": str(e),
+                    "action": "Check your internet connection and try again."}
         return _enrich_error(data)
 
     # ── validate ──────────────────────────────────────────────────────────────
@@ -576,10 +608,6 @@ class KwtSMS:
             ERROR:   {"result":"ERROR",   "bulk":True, ...}
 
         Note: result["unix-timestamp"] is GMT+3 server time. Log entries use UTC.
-
-        Raises:
-            RuntimeError: on network / HTTP failure (single send only;
-                          bulk captures errors per batch).
         """
         effective_sender = sender or self.sender_id
 
@@ -618,7 +646,15 @@ class KwtSMS:
                 "message": clean_message(message),
                 "test":    "1" if self.test_mode else "0",
             }
-            result = _request("send", payload, self.log_file)
+            try:
+                result = _request("send", payload, self.log_file)
+            except RuntimeError as e:
+                return {
+                    "result":      "ERROR",
+                    "code":        "NETWORK",
+                    "description": str(e),
+                    "action":      "Check your internet connection and try again.",
+                }
             if result.get("result") == "OK" and "balance-after" in result:
                 self._cached_balance = float(result["balance-after"])
             else:
