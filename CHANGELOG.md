@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.27] - 2026-03-06
+
+### Added
+- `.github/workflows/codeql.yml`: CodeQL security scanning on push, pull request, and weekly schedule
+- `.github/dependabot.yml`: Dependabot weekly checks for pip and GitHub Actions dependency updates
+
+---
+
 ## [0.7.26] - 2026-03-06
 
 ### Changed
