@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.20] - 2026-03-05
+
+### Added
+- GitHub Actions CI workflow: runs pytest on Python 3.8 through 3.13 on every push and pull request
+- GitHub Actions publish workflow: builds and publishes to PyPI automatically on tag push using trusted publisher (no stored secrets)
+
+---
+
 ## [0.7.19] - 2026-03-05
 
 ### Added

@@ -32,5 +32,3 @@ CLAUDE.md
 # Claude Code local config
 .claude/
 
-# GitHub Actions / workflows (stay local)
-.github/
