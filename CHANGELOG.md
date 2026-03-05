@@ -11,6 +11,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.31] - 2026-03-06
+
+### Added
+- `README.md`: CI and CodeQL status badges
+
+---
+
 ## [0.7.30] - 2026-03-06
 
 ### Changed
