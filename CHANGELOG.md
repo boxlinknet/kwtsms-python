@@ -11,6 +11,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.30] - 2026-03-06
+
+### Changed
+- Version bump to unblock PyPI publish (v0.7.29 publish workflow stuck in queue due to GitHub infrastructure issue)
+
+---
+
 ## [0.7.29] - 2026-03-06
 
 ### Fixed
