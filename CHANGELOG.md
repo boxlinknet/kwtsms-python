@@ -11,6 +11,18 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.28] - 2026-03-06
+
+### Changed
+- GitHub Actions: bumped `actions/checkout` to v6, `actions/setup-python` to v6, `github/codeql-action` to v4 across all workflows
+
+### Fixed
+- `.gitignore`: added `.pytest_cache/` exclusion
+- Removed empty `tests/__init__.py` (not required by pytest)
+- `uv.lock`: synced to match declared dev dependencies
+
+---
+
 ## [0.7.27] - 2026-03-06
 
 ### Added

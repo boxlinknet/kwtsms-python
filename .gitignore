@@ -8,6 +8,9 @@ __pycache__/
 .venv/
 .python-version
 
+# Test cache
+.pytest_cache/
+
 # Build output
 dist/
 build/
