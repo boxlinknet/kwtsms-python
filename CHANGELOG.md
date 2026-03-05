@@ -11,6 +11,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.19] - 2026-03-05
+
+### Added
+- PyPI version, Python versions, and License badges to README
+
+---
+
 ## [0.7.18] - 2026-03-05
 
 ### Changed
