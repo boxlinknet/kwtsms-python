@@ -26,9 +26,11 @@ kwtsms.log
 # Claude Code config
 CLAUDE.md
 
-# Internal docs and tests (stay local)
+# Internal docs (stay local)
 /docs/
-/tests/
+
+# Claude Code local config
+.claude/
 
 # GitHub Actions / workflows (stay local)
 .github/
