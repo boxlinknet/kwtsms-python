@@ -1,4 +1,4 @@
-from kwtsms._core import parse_webhook
+from kwtsms import parse_webhook
 
 VALID_PAYLOAD = {
     "msg-id":       "abc123",
@@ -15,6 +15,7 @@ class TestParseWebhook:
         assert result["phone"] == "96598765432"
         assert result["status"] == "DELIVERED"
         assert result["delivered_at"] == 1700000000
+        assert result["raw"] == VALID_PAYLOAD
 
     def test_missing_msg_id_returns_error(self):
         result = parse_webhook({"mobile": "96598765432", "status": "DELIVERED"})
@@ -24,8 +25,9 @@ class TestParseWebhook:
     def test_missing_status_returns_error(self):
         result = parse_webhook({"msg-id": "abc123", "mobile": "96598765432"})
         assert result["ok"] is False
+        assert "status" in result["error"]
 
-    def test_empty_payload_returns_error(self):
+    def test_missing_all_required_fields_returns_error(self):
         result = parse_webhook({})
         assert result["ok"] is False
 
