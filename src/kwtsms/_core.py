@@ -763,7 +763,7 @@ class KwtSMS:
             mobile:      phone number(s) to send to
             message:     message text
             sender:      Sender ID override (uses default if not given)
-            max_retries: maximum number of ERR028 retries (default 3)
+            max_retries: maximum number of ERR028 retries after the first attempt (default 3, so up to 4 total calls)
 
         Returns:
             Same dict shape as send(). Never raises.

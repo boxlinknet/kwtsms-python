@@ -1,5 +1,4 @@
 from unittest.mock import patch
-import pytest
 from kwtsms import KwtSMS
 
 def _client(**kwargs) -> KwtSMS:
@@ -30,11 +29,20 @@ class TestSendWithRetry:
         mock_sleep.assert_called_once_with(16)
 
     def test_err028_three_times_gives_up(self):
-        with patch("kwtsms._core._request", return_value=ERR028_RESPONSE):
-            with patch("kwtsms._core.time.sleep"):
+        with patch("kwtsms._core._request", return_value=ERR028_RESPONSE) as mock_req:
+            with patch("kwtsms._core.time.sleep") as mock_sleep:
                 result = _client().send_with_retry("96598765432", "Test", max_retries=3)
         assert result["result"] == "ERROR"
         assert result["code"] == "ERR028"
+        assert mock_sleep.call_count == 3
+        assert mock_req.call_count == 4
+
+    def test_max_retries_zero_never_sleeps(self):
+        with patch("kwtsms._core._request", return_value=ERR028_RESPONSE):
+            with patch("kwtsms._core.time.sleep") as mock_sleep:
+                result = _client().send_with_retry("96598765432", "Test", max_retries=0)
+        assert result["code"] == "ERR028"
+        mock_sleep.assert_not_called()
 
     def test_non_err028_error_not_retried(self):
         err010 = {"result": "ERROR", "code": "ERR010", "description": "Zero balance."}
