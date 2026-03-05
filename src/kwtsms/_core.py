@@ -744,6 +744,38 @@ class KwtSMS:
 
         return result
 
+    # ── send_with_retry ───────────────────────────────────────────────────────
+
+    def send_with_retry(
+        self,
+        mobile: Union[str, List[str]],
+        message: str,
+        sender: Optional[str] = None,
+        max_retries: int = 3,
+    ) -> dict:
+        """
+        Send SMS, retrying automatically on ERR028 (rate limit: wait 15 seconds).
+
+        Waits 16 seconds between retries (15 seconds required by API, plus 1 second buffer).
+        All other errors are returned immediately without retry.
+
+        Args:
+            mobile:      phone number(s) to send to
+            message:     message text
+            sender:      Sender ID override (uses default if not given)
+            max_retries: maximum number of ERR028 retries (default 3)
+
+        Returns:
+            Same dict shape as send(). Never raises.
+        """
+        result = self.send(mobile, message, sender=sender)
+        retries = 0
+        while result.get("code") == "ERR028" and retries < max_retries:
+            time.sleep(16)
+            result = self.send(mobile, message, sender=sender)
+            retries += 1
+        return result
+
     # ── _send_bulk ────────────────────────────────────────────────────────────
 
     def _send_bulk(self, numbers: List[str], message: str, sender: str) -> dict:

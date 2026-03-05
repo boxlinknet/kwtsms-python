@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.24] - 2026-03-05
+
+### Added
+- `send_with_retry()` method on `KwtSMS`: automatically retries on ERR028 (rate limit) with a 16-second wait between attempts
+- `tests/test_retry.py`: four tests covering first-attempt success, ERR028 retry with sleep, exhausted retries, and non-ERR028 errors not retried
+
+---
+
 ## [0.7.23] - 2026-03-05
 
 ### Added
