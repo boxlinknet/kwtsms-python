@@ -466,6 +466,32 @@ class KwtSMS:
         ok, bal, _ = self.verify()
         return bal if ok else self._cached_balance
 
+    # ── status ────────────────────────────────────────────────────────────────
+
+    def status(self, msg_id: str) -> dict:
+        """
+        Get delivery status for a sent message via /report/.
+
+        Args:
+            msg_id: The message ID returned by send() in result["msg-id"].
+
+        Returns:
+            OK:    {"result": "OK", "msg-id": "...", "status": "DELIVERED", ...}
+            ERROR: {"result": "ERROR", "code": "ERR020", "description": "...", "action": "..."}
+
+        Common error codes:
+            ERR019: No delivery reports found
+            ERR020: Message ID does not exist
+            ERR021: Report not ready yet
+            ERR022: Try again after 24 hours
+        """
+        try:
+            data = _request("report", {**self._creds(), "msgid": msg_id}, self.log_file)
+        except RuntimeError as e:
+            return {"result": "ERROR", "code": "NETWORK", "description": str(e),
+                    "action": "Check your internet connection and try again."}
+        return _enrich_error(data)
+
     # ── senderids ─────────────────────────────────────────────────────────────
 
     def senderids(self) -> dict:

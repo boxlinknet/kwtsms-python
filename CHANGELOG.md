@@ -11,6 +11,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.21] - 2026-03-05
+
+### Added
+- `status()` method on `KwtSMS`: looks up delivery status for a sent message via `/report/` endpoint
+- `tests/test_status.py`: three tests covering OK response, error enrichment, and network error handling
+
+---
+
 ## [0.7.20] - 2026-03-05
 
 ### Added

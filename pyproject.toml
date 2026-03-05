@@ -1,6 +1,6 @@
 [project]
 name = "kwtsms"
-version = "0.7.20"
+version = "0.7.21"
 description = "Python client for kwtSMS, the Kuwait SMS gateway trusted by top businesses to deliver messages worldwide, with private Sender ID, free API testing, and non-expiring credits."
 readme = "README.md"
 requires-python = ">=3.8"
