@@ -11,6 +11,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.26] - 2026-03-06
+
+### Changed
+- Module docstring: added `send_with_retry()` to the quick start example block
+
+---
+
 ## [0.7.25] - 2026-03-05
 
 ### Added
