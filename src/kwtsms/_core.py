@@ -159,18 +159,23 @@ _HIDDEN_CHARS: frozenset = frozenset({
 def _char_is_sms_safe(cp: int) -> bool:
     """Return False for emoji and pictographic codepoints that break SMS delivery."""
     return not (
-        0x1F600 <= cp <= 0x1F64F
-        or 0x1F300 <= cp <= 0x1F5FF
-        or 0x1F680 <= cp <= 0x1F6FF
-        or 0x1F700 <= cp <= 0x1F77F
-        or 0x1F780 <= cp <= 0x1F7FF
-        or 0x1F800 <= cp <= 0x1F8FF
-        or 0x1F900 <= cp <= 0x1F9FF
-        or 0x1FA00 <= cp <= 0x1FA6F
-        or 0x1FA70 <= cp <= 0x1FAFF
-        or 0x2600 <= cp <= 0x26FF
-        or 0x2700 <= cp <= 0x27BF
-        or 0xFE00 <= cp <= 0xFE0F
+        0x1F600 <= cp <= 0x1F64F    # emoticons
+        or 0x1F300 <= cp <= 0x1F5FF # misc symbols and pictographs
+        or 0x1F680 <= cp <= 0x1F6FF # transport and map
+        or 0x1F700 <= cp <= 0x1F77F # alchemical symbols
+        or 0x1F780 <= cp <= 0x1F7FF # geometric shapes extended
+        or 0x1F800 <= cp <= 0x1F8FF # supplemental arrows-C
+        or 0x1F900 <= cp <= 0x1F9FF # supplemental symbols and pictographs
+        or 0x1FA00 <= cp <= 0x1FA6F # chess symbols
+        or 0x1FA70 <= cp <= 0x1FAFF # symbols and pictographs extended-A
+        or 0x2600 <= cp <= 0x26FF   # miscellaneous symbols
+        or 0x2700 <= cp <= 0x27BF   # dingbats
+        or 0xFE00 <= cp <= 0xFE0F   # variation selectors
+        # Extended emoji ranges
+        or 0x1F000 <= cp <= 0x1F0FF # mahjong tiles + playing cards
+        or 0x1F1E0 <= cp <= 0x1F1FF # regional indicator symbols (country flags)
+        or cp == 0x20E3             # combining enclosing keycap (1️⃣ 2️⃣ etc.)
+        or 0xE0000 <= cp <= 0xE007F # tags block (subdivision flags e.g. 🏴󠁧󠁢󠁥󠁮󠁧󠁿)
     )
 
 
@@ -184,11 +189,14 @@ def clean_message(text: str) -> str:
 
     Strips content that silently breaks delivery:
     - Arabic-Indic / Extended Arabic-Indic digits → Latin digits
-    - Emojis and pictographic symbols (silently stuck in queue)
+    - Emojis and pictographic symbols (silently stuck in queue), including:
+      flags (regional indicators + tags block), keycap (U+20E3),
+      mahjong/playing card tiles, and all standard emoji ranges
     - Hidden control characters: BOM, zero-width space, soft hyphen, etc.
     - HTML tags (causes ERR027)
 
     Does NOT strip Arabic letters. Arabic text is fully supported.
+    Returns "" if the entire message was emoji or invisible characters.
     """
     # 1. Convert Arabic-Indic digits (٠١٢٣٤٥٦٧٨٩) and
     #    Extended Arabic-Indic / Persian digits (۰۱۲۳۴۵۶۷۸۹) to Latin
@@ -636,14 +644,24 @@ class KwtSMS:
                 "invalid":     invalid,
             })
 
+        # Clean message before routing so both paths see the same cleaned text,
+        # and so an emoji-only message is caught locally before any API call.
+        cleaned_message = clean_message(message)
+        if not cleaned_message:
+            return _enrich_error({
+                "result":      "ERROR",
+                "code":        "ERR009",
+                "description": "Message is empty after cleaning (contained only emojis or invisible characters).",
+            })
+
         if len(valid_numbers) > 200:
-            result = self._send_bulk(valid_numbers, message, effective_sender)
+            result = self._send_bulk(valid_numbers, cleaned_message, effective_sender)
         else:
             payload = {
                 **self._creds(),
                 "sender":  effective_sender,
                 "mobile":  ",".join(valid_numbers),
-                "message": clean_message(message),
+                "message": cleaned_message,
                 "test":    "1" if self.test_mode else "0",
             }
             try:
