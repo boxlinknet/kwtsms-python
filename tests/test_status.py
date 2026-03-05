@@ -33,9 +33,12 @@ class TestStatus:
             result = _client().status("bad-id")
         assert result["result"] == "ERROR"
         assert "action" in result
+        assert "msg-id" in result["action"]
 
     def test_status_network_error_returns_dict(self):
         with patch("kwtsms._core._request", side_effect=RuntimeError("Timeout")):
             result = _client().status("abc123")
         assert result["result"] == "ERROR"
         assert result["code"] == "NETWORK"
+        assert "Timeout" in result["description"]
+        assert result.get("action")
