@@ -1,4 +1,4 @@
-# kwtSMS Python — Examples
+# kwtSMS Python: Examples
 
 Step-by-step examples covering everything from a first send to a production
 OTP system with CAPTCHA, rate limiting, and brute-force protection.
