@@ -11,6 +11,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.23] - 2026-03-05
+
+### Added
+- `AsyncKwtSMS` class in `src/kwtsms/_async.py`: async version of `KwtSMS` using `aiohttp`
+- Methods: `verify()`, `balance()`, `send()`, `status()`, `from_env()`, `purchased` property
+- Optional dependency: `pip install kwtsms[async]` (installs aiohttp)
+- `tests/test_async.py`: six tests covering constructor validation, verify, send (OK and pre-validation errors), and network error handling
+- `AsyncKwtSMS` exported from top-level `kwtsms` package
+
+---
+
 ## [0.7.22] - 2026-03-05
 
 ### Added

@@ -11,12 +11,15 @@ Quick start:
     report = sms.validate(["96598765432", "+96512345678"])
     balance = sms.balance()
     delivery = sms.status(result["msg-id"])                  # delivery report
+    sms = AsyncKwtSMS.from_env()                     # async client (pip install kwtsms[async])
 
 Utility functions:
     from kwtsms import normalize_phone, clean_message, validate_phone_input, parse_webhook
 """
 
 from kwtsms._core import KwtSMS, clean_message, normalize_phone, validate_phone_input, parse_webhook
+from kwtsms._async import AsyncKwtSMS
 
-__all__ = ["KwtSMS", "normalize_phone", "clean_message", "validate_phone_input", "parse_webhook"]
-__version__ = "0.7.22"
+__all__ = ["KwtSMS", "AsyncKwtSMS", "normalize_phone", "clean_message",
+           "validate_phone_input", "parse_webhook"]
+__version__ = "0.7.23"
