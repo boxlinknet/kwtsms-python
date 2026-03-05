@@ -11,6 +11,17 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.29] - 2026-03-06
+
+### Fixed
+- `README.md`: corrected error handling example (`send()` never raises, removed incorrect `try/except RuntimeError`)
+- `README.md`: documented `status()`, `send_with_retry()`, `parse_webhook()`, and `AsyncKwtSMS` (were missing)
+- `README.md`: added `parse_webhook` to utility functions import line, added `_async.py` to repository layout
+- `CONTRIBUTING.md`: fixed repo URL (`kwtsms_python` → `kwtsms-python`), updated project structure and exports, added new test files, corrected optional dependency policy
+- `examples/README.md`: fixed CLI example syntax (`--phone`/`--message` flags do not exist)
+
+---
+
 ## [0.7.28] - 2026-03-06
 
 ### Changed

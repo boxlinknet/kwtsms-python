@@ -239,7 +239,7 @@ result = sms.send(["96598765432", "abc", "user@gmail.com"], "Hello")
 # ]
 ```
 
-**Raises** `RuntimeError` on network/HTTP failure (single send only, bulk captures errors per batch).
+Never raises. Network failures are returned as `{"result": "ERROR", "code": "NETWORK", "description": "...", "action": "..."}`.
 
 ---
 
@@ -324,10 +324,84 @@ else:
 
 ---
 
+### `status(msg_id)` → `dict`
+
+Get delivery status for a sent message. Uses the `/report/` endpoint.
+
+```python
+delivery = sms.status(result["msg-id"])
+if delivery["result"] == "OK":
+    print(delivery["status"])        # "DELIVERED", "FAILED", "PENDING", "REJECTED"
+    print(delivery["delivered-at"])  # unix timestamp (GMT+3)
+else:
+    print(delivery["action"])
+```
+
+Returns OK or ERROR dict. Never raises. Common error codes: ERR019 (no reports yet), ERR020 (ID not found), ERR021 (not ready yet).
+
+---
+
+### `send_with_retry(mobile, message, sender=None, max_retries=3)` → `dict`
+
+Send SMS with automatic ERR028 retry. ERR028 means "wait 15 seconds before resending to this number." This method sleeps 16 seconds and retries automatically, up to `max_retries` times (default 3, so up to 4 total calls).
+
+```python
+result = sms.send_with_retry("96598765432", "Your OTP is: 123456")
+# if ERR028 occurs: waits 16s and retries, up to 3 times
+```
+
+Non-ERR028 errors are returned immediately without retry. Never raises.
+
+---
+
+### `parse_webhook(payload)` → `dict`
+
+Parse a kwtSMS delivery receipt webhook payload. kwtSMS can POST delivery receipts to your server as JSON.
+
+```python
+from kwtsms import parse_webhook
+
+# In your webhook endpoint (Flask/FastAPI/Django):
+result = parse_webhook(request.json)
+if result["ok"]:
+    print(result["msg_id"])        # matches the msg-id from send()
+    print(result["phone"])         # recipient number
+    print(result["status"])        # "DELIVERED", "FAILED", "PENDING", "REJECTED"
+    print(result["delivered_at"])  # unix timestamp, or None
+else:
+    print(result["error"])         # "Missing required field: 'msg-id'"
+```
+
+---
+
+### AsyncKwtSMS
+
+Async version of `KwtSMS` for use with `asyncio`. Requires the optional `aiohttp` dependency:
+
+```bash
+pip install kwtsms[async]
+```
+
+```python
+from kwtsms import AsyncKwtSMS
+
+sms = AsyncKwtSMS.from_env()
+
+async def send_otp(phone: str, code: str):
+    ok, balance, error = await sms.verify()
+    result = await sms.send(phone, f"Your OTP is: {code}")
+    delivery = await sms.status(result["msg-id"])
+    return result
+```
+
+`AsyncKwtSMS` mirrors `KwtSMS` exactly: `verify()`, `balance()`, `send()`, `status()`, `from_env()`, `purchased` property. Maximum 200 numbers per `send()` call (no auto-batching in async mode). All methods return dicts and never raise.
+
+---
+
 ## Utility functions
 
 ```python
-from kwtsms import normalize_phone, validate_phone_input, clean_message
+from kwtsms import normalize_phone, validate_phone_input, clean_message, parse_webhook
 
 # Normalize a phone number: strips +, 00, spaces, dashes; converts Arabic digits
 normalize_phone("+96598765432")      # → "96598765432"
@@ -397,21 +471,16 @@ kwtsms validate 96598765432 +96512345678 0096511111111
 
 ## Error handling
 
-Every API error response includes an `action` field with guidance:
+Every API error response includes an `action` field with guidance. `send()` never raises: network failures are returned as a dict with `code="NETWORK"`.
 
 ```python
-try:
-    result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
-except RuntimeError as e:
-    # Network/HTTP failure: log and retry
-    print(f"Network error: {e}")
+result = sms.send("96598765432", "Your OTP for MYAPP is: 123456")
+if result["result"] == "OK":
+    save_to_db(msg_id=result["msg-id"], balance=result["balance-after"])
 else:
-    if result["result"] == "OK":
-        save_to_db(msg_id=result["msg-id"], balance=result["balance-after"])
-    else:
-        print(result["code"])        # e.g. "ERR010"
-        print(result["description"]) # "Account balance is zero."
-        print(result["action"])      # "Recharge credits at kwtsms.com."
+    print(result["code"])        # e.g. "ERR010" or "NETWORK"
+    print(result["description"]) # "Account balance is zero."
+    print(result["action"])      # "Recharge credits at kwtsms.com."
 ```
 
 Common error codes:
@@ -620,9 +689,12 @@ International sending is **disabled by default** on kwtSMS accounts. Contact kwt
 ```
 kwtsms_python/
 ├── src/kwtsms/
-│   ├── _core.py      ← KwtSMS class + all logic
+│   ├── _core.py      ← KwtSMS class + all sync logic
+│   ├── _async.py     ← AsyncKwtSMS (requires kwtsms[async])
 │   ├── _cli.py       ← kwtsms CLI command
 │   └── __init__.py   ← public exports
+├── tests/            ← pytest test suite
+├── examples/         ← runnable example scripts
 ├── pyproject.toml
 ├── uv.lock
 ├── README.md

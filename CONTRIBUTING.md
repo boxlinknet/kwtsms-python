@@ -15,7 +15,7 @@ Be respectful and constructive. Treat all contributors as professionals.
 ### 1. Clone and set up
 
 ```bash
-git clone https://github.com/boxlinknet/kwtsms_python.git
+git clone https://github.com/boxlinknet/kwtsms-python.git
 cd kwtsms_python
 ```
 
@@ -63,6 +63,10 @@ tests/
   test_api_errors.py   # _enrich_error(), verify(), send() error paths
   test_bulk.py         # _send_bulk() routing, batching, ERR013 retry
   test_env.py          # _load_env_file(), from_env(), .env edge cases
+  test_status.py       # KwtSMS.status() delivery report lookup
+  test_webhook.py      # parse_webhook() delivery receipt parser
+  test_async.py        # AsyncKwtSMS async client
+  test_retry.py        # send_with_retry() ERR028 auto-retry
   test_integration.py  # live API tests (skipped without credentials)
 ```
 
@@ -70,7 +74,7 @@ tests/
 
 ## Reporting Bugs
 
-Open an issue at https://github.com/boxlinknet/kwtsms_python/issues with:
+Open an issue at https://github.com/boxlinknet/kwtsms-python/issues with:
 
 1. Python version and OS
 2. Package version (`pip show kwtsms`)
@@ -90,8 +94,7 @@ Open an issue before writing code for new features. Describe:
 2. What the API would look like (function signature, return value)
 3. Whether it requires a new API endpoint
 
-Features that add external dependencies will not be accepted. The package
-is and will remain zero-dependency.
+Features that add mandatory external dependencies will not be accepted. The core package is zero-dependency. Optional extras (e.g., `kwtsms[async]` for aiohttp) are acceptable if declared under `[project.optional-dependencies]` in `pyproject.toml`.
 
 ---
 
@@ -101,8 +104,10 @@ is and will remain zero-dependency.
 
 ```
 src/kwtsms/
-  __init__.py     # Public API: KwtSMS, clean_message, normalize_phone, validate_phone_input
-  _core.py        # All client logic
+  __init__.py     # Public API: KwtSMS, AsyncKwtSMS, clean_message, normalize_phone,
+                  #             validate_phone_input, parse_webhook
+  _core.py        # All sync client logic
+  _async.py       # AsyncKwtSMS (requires kwtsms[async] / aiohttp)
   _cli.py         # CLI entry points (kwtsms verify/send/balance/setup)
 
 tests/            # pytest test suite

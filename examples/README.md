@@ -78,10 +78,10 @@ Send SMS and verify credentials from the terminal:
 kwtsms verify
 
 # Send a message
-kwtsms send --phone 96598765432 --message "Hello from kwtSMS"
+kwtsms send 96598765432 "Hello from kwtSMS"
 
 # Override sender ID for one message
-kwtsms send --phone 96598765432 --message "Hello" --sender MY-BRAND
+kwtsms send 96598765432 "Hello" --sender MY-BRAND
 ```
 
 Reads credentials from `.env` or environment variables.
