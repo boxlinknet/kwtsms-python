@@ -11,6 +11,15 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.18] - 2026-03-05
+
+### Changed
+- Development Status classifier: Alpha to Beta
+- Added Python 3.13 classifier
+- Fixed project.urls: added Repository and Changelog links, updated Documentation to point to examples
+
+---
+
 ## [0.7.17] - 2026-03-05
 
 ### Fixed
