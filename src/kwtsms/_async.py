@@ -16,12 +16,14 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import datetime, timezone
 from typing import List, Optional, Union
 
 from kwtsms._core import (
     BASE_URL,
     _enrich_error,
     _load_env_file,
+    _write_log,
     clean_message,
     validate_phone_input,
 )
@@ -40,14 +42,34 @@ async def _async_request(endpoint: str, payload: dict, log_file: str = "") -> di
             "aiohttp is required for async usage. Install with: pip install kwtsms[async]"
         )
     url = BASE_URL + endpoint + "/"
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, json=payload,
-                                timeout=aiohttp.ClientTimeout(total=15)) as resp:
-            text = await resp.text()
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError as exc:
-                raise RuntimeError(f"Invalid JSON response: {exc}") from exc
+    safe_payload = {k: ("***" if k == "password" else v) for k, v in payload.items()}
+    log_entry = {
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "endpoint": endpoint,
+        "request": safe_payload,
+        "response": None,
+        "ok": False,
+        "error": None,
+    }
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload,
+                                    timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                text = await resp.text()
+                try:
+                    data = json.loads(text)
+                except json.JSONDecodeError as exc:
+                    log_entry["error"] = f"Invalid JSON response: {exc}"
+                    _write_log(log_file, log_entry)
+                    raise RuntimeError(f"Invalid JSON response: {exc}") from exc
+                log_entry["response"] = data
+                log_entry["ok"] = data.get("result") == "OK"
+                _write_log(log_file, log_entry)
+                return data
+    except aiohttp.ClientError as exc:
+        log_entry["error"] = f"Network error: {exc}"
+        _write_log(log_file, log_entry)
+        raise RuntimeError(f"Network error: {exc}") from exc
 
 
 class AsyncKwtSMS:
@@ -64,6 +86,16 @@ class AsyncKwtSMS:
 
     def __init__(self, username: str, password: str, sender_id: str = "KWT-SMS",
                  test_mode: bool = False, log_file: str = "kwtsms.log"):
+        """
+        Create an AsyncKwtSMS client.
+
+        Args:
+            username:  kwtSMS API username
+            password:  kwtSMS API password
+            sender_id: default Sender ID shown on recipient's phone
+            test_mode: if True, sends are billed as test (no credits consumed)
+            log_file:  path to JSONL request log file, or "" to disable logging
+        """
         if not username or not password:
             raise ValueError("username and password are required")
         self.username   = username
@@ -107,6 +139,7 @@ class AsyncKwtSMS:
 
     @property
     def purchased(self) -> Optional[float]:
+        """Total credits purchased. None before the first successful verify() call."""
         return self._cached_purchased
 
     async def verify(self) -> tuple:
@@ -125,7 +158,7 @@ class AsyncKwtSMS:
             return False, None, str(exc)
 
     async def balance(self) -> Optional[float]:
-        """Get current balance. Returns None on error."""
+        """Get current balance. Returns None on error (or last cached value if available)."""
         ok, bal, _ = await self.verify()
         return bal if ok else self._cached_balance
 
@@ -133,6 +166,8 @@ class AsyncKwtSMS:
                    sender: Optional[str] = None) -> dict:
         """
         Send SMS to one or more numbers. Same contract as KwtSMS.send().
+
+        Note: Maximum 200 numbers per call. For larger lists, split into batches.
 
         Returns OK or ERROR dict; never raises.
         """
@@ -153,6 +188,13 @@ class AsyncKwtSMS:
                            else f"All {len(invalid)} phone numbers are invalid")
             return _enrich_error({"result": "ERROR", "code": "ERR_INVALID_INPUT",
                                   "description": description, "invalid": invalid})
+
+        if len(valid_numbers) > 200:
+            return _enrich_error({
+                "result": "ERROR",
+                "code": "ERR007",
+                "description": f"Too many numbers ({len(valid_numbers)}). Maximum 200 per call. For larger lists, call send() in batches.",
+            })
 
         cleaned = clean_message(message)
         if not cleaned:

@@ -53,3 +53,10 @@ class TestAsyncKwtSMS:
             ok, balance, error = await _async_client().verify()
         assert ok is False
         assert "Timeout" in error
+
+    @pytest.mark.asyncio
+    async def test_send_too_many_numbers_returns_err007(self):
+        numbers = [f"9659{i:07d}" for i in range(201)]
+        result = await _async_client().send(numbers, "Hello")
+        assert result["result"] == "ERROR"
+        assert result["code"] == "ERR007"
