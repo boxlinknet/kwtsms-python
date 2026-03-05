@@ -11,6 +11,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.17] - 2026-03-05
+
+### Fixed
+- `examples/README.md`: em dash in title replaced with colon (style rule)
+
+---
+
 ## [0.7.16] - 2026-03-05
 
 ### Added
