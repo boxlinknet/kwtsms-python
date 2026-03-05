@@ -11,6 +11,13 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.25] - 2026-03-05
+
+### Added
+- `SECURITY.md`: security policy and vulnerability reporting guidelines
+
+---
+
 ## [0.7.24] - 2026-03-05
 
 ### Added
