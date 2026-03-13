@@ -634,6 +634,12 @@ class KwtSMS:
         self._cached_balance: Optional[float] = None
         self._cached_purchased: Optional[float] = None
 
+    def __repr__(self) -> str:
+        return (
+            f"KwtSMS(username={self.username!r}, password='***', "
+            f"sender_id={self.sender_id!r}, test_mode={self.test_mode!r})"
+        )
+
     @classmethod
     def from_env(cls, env_file: str = ".env") -> "KwtSMS":
         """
@@ -1009,7 +1015,6 @@ class KwtSMS:
         BATCH_DELAY  = 0.5
         ERR013_WAIT  = [30, 60, 120]
 
-        message = clean_message(message)
         batches = [numbers[i:i + BATCH_SIZE] for i in range(0, len(numbers), BATCH_SIZE)]
         total_batches = len(batches)
 

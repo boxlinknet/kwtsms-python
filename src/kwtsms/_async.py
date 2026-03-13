@@ -106,6 +106,12 @@ class AsyncKwtSMS:
         self._cached_balance:   Optional[float] = None
         self._cached_purchased: Optional[float] = None
 
+    def __repr__(self) -> str:
+        return (
+            f"AsyncKwtSMS(username={self.username!r}, password='***', "
+            f"sender_id={self.sender_id!r}, test_mode={self.test_mode!r})"
+        )
+
     @classmethod
     def from_env(cls, env_file: str = ".env") -> "AsyncKwtSMS":
         """Load credentials from environment variables, falling back to .env file."""
