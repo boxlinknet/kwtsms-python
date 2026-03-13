@@ -7,6 +7,35 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
+## [0.7.35] - 2026-03-14
+
+### Added
+- `README.md`: Downloads and GitGuardian badges
+
+---
+
+## [0.7.34] - 2026-03-14
+
+### Added
+- Country-specific phone validation rules for 80+ countries (`_PHONE_RULES`)
+- `find_country_code()` function: find country code prefix from a normalized phone number
+- `validate_phone_format()` function: validate phone numbers against country-specific length and mobile prefix rules
+- Domestic trunk prefix stripping in `normalize_phone()` (e.g., `9660559...` becomes `966559...`)
+- Both new functions exported from top-level `kwtsms` package
+- 24 new phone validation tests
+
+### Changed
+- `validate_phone_input()` now runs country-specific format validation after basic checks
+
+---
+
+## [0.7.33] - 2026-03-14
+
+### Added
+- `.github/workflows/gitguardian.yml`: GitGuardian secret scanning on push and pull request
+
+---
+
 ## [0.7.32] - 2026-03-13
 
 ### Removed

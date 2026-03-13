@@ -399,12 +399,15 @@ async def send_otp(phone: str, code: str):
 ## Utility functions
 
 ```python
-from kwtsms import normalize_phone, validate_phone_input, clean_message, parse_webhook
+from kwtsms import (normalize_phone, validate_phone_input, clean_message,
+                     parse_webhook, find_country_code, validate_phone_format)
 
-# Normalize a phone number: strips +, 00, spaces, dashes; converts Arabic digits
+# Normalize a phone number: strips +, 00, spaces, dashes; converts Arabic digits;
+# strips domestic trunk prefix (e.g. 9660559... becomes 966559...)
 normalize_phone("+96598765432")      # → "96598765432"
 normalize_phone("00 965 9876-5432") # → "96598765432"
 normalize_phone("٩٦٥٩٨٧٦٥٤٣٢")     # → "96598765432"
+normalize_phone("9660559123456")    # → "966559123456"  (Saudi trunk 0 stripped)
 
 # Validate a phone number: returns (is_valid, error, normalized)
 ok, error, number = validate_phone_input("+96598765432")
@@ -415,6 +418,18 @@ ok, error, number = validate_phone_input("user@gmail.com")
 
 ok, error, number = validate_phone_input("123")
 # → (False, "'123' is too short to be a valid phone number (3 digits, minimum is 7)", "123")
+
+ok, error, number = validate_phone_input("96512345678")
+# → (False, "Invalid Kuwait mobile number: after +965 must start with 4, 5, 6, 9", "96512345678")
+
+# Find country code from a normalized number
+find_country_code("96598765432")    # → "965" (Kuwait)
+find_country_code("12125551234")    # → "1"   (USA/Canada)
+find_country_code("8887654321")     # → None  (unknown)
+
+# Validate phone format against country-specific rules (length + mobile prefix)
+valid, error = validate_phone_format("96598765432")   # → (True, None)
+valid, error = validate_phone_format("96512345678")   # → (False, "Invalid Kuwait mobile...")
 
 # Clean message text: also called automatically inside send()
 clean_message("Your OTP is: ١٢٣٤٥٦ 🎉")  # → "Your OTP is: 123456 "
@@ -431,6 +446,8 @@ All phone numbers are normalized automatically before every API call:
 1. Arabic/Hindi digits (`٠١٢٣٤٥٦٧٨٩` / `۰۱۲۳۴۵۶۷۸۹`) → Latin (`0123456789`)
 2. All non-digit characters stripped (`+`, spaces, dashes, dots, brackets, etc.)
 3. Leading zeros stripped (handles `00` country code prefix)
+4. Domestic trunk prefix stripped after country code (e.g., `9660559...` → `966559...`)
+5. Country-specific validation: checks local number length and mobile prefix for 80+ countries
 
 Numbers must include the country code (e.g., `96598765432` for Kuwait, not `98765432`).
 

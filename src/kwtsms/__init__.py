@@ -26,4 +26,4 @@ from kwtsms._async import AsyncKwtSMS
 __all__ = ["KwtSMS", "AsyncKwtSMS", "normalize_phone", "clean_message",
            "validate_phone_input", "parse_webhook",
            "find_country_code", "validate_phone_format"]
-__version__ = "0.7.35"
+__version__ = "0.7.36"
