@@ -1,10 +1,12 @@
 # kwtsms Python
 
 [![PyPI](https://img.shields.io/pypi/v/kwtsms)](https://pypi.org/project/kwtsms/)
+[![Downloads](https://img.shields.io/pypi/dm/kwtsms)](https://pypi.org/project/kwtsms/)
 [![Python](https://img.shields.io/pypi/pyversions/kwtsms)](https://pypi.org/project/kwtsms/)
 [![License](https://img.shields.io/pypi/l/kwtsms)](https://github.com/boxlinknet/kwtsms-python/blob/master/LICENSE)
 [![CI](https://github.com/boxlinknet/kwtsms-python/actions/workflows/ci.yml/badge.svg)](https://github.com/boxlinknet/kwtsms-python/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/boxlinknet/kwtsms-python/actions/workflows/codeql.yml/badge.svg)](https://github.com/boxlinknet/kwtsms-python/actions/workflows/codeql.yml)
+[![GitGuardian](https://github.com/boxlinknet/kwtsms-python/actions/workflows/gitguardian.yml/badge.svg)](https://github.com/boxlinknet/kwtsms-python/actions/workflows/gitguardian.yml)
 
 Official Python client for the [kwtSMS API](https://kwtsms.com), the Kuwait SMS gateway.
 
