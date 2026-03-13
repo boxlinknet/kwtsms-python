@@ -139,12 +139,6 @@ KWTSMS_TEST_MODE=1                # 1 = test (safe default), 0 = live
 KWTSMS_LOG_FILE=kwtsms.log        # JSONL log path, set to "" to disable
 ```
 
-Or run the interactive setup wizard (verifies credentials and lists your sender IDs):
-
-```bash
-kwtsms setup
-```
-
 `from_env()` checks environment variables first, then the `.env` file as fallback.
 
 ---
@@ -455,19 +449,7 @@ Arabic **letters** are fully supported and are NOT stripped.
 
 ## CLI
 
-```bash
-kwtsms setup                                          # first-time wizard
-kwtsms verify                                         # test credentials + show balance + purchased
-kwtsms balance                                        # check available and purchased credits
-kwtsms senderid                                       # list sender IDs on this account
-kwtsms coverage                                       # list active country prefixes
-kwtsms send 96598765432 "Your OTP is: 123456"        # send SMS
-kwtsms send 96598765432,96512345678 "Hello!"          # multiple numbers (no spaces around commas)
-kwtsms send "96598765432, 96512345678" "Hello!"       # or quote the list (spaces OK inside quotes)
-kwtsms send 96598765432 "Hello" --sender MY-APP       # override sender ID
-kwtsms send 96598765432 "Hello" --sender "kwt sms"   # sender ID with spaces: quote it
-kwtsms validate 96598765432 +96512345678 0096511111111
-```
+For a standalone cross-platform CLI, see [kwtsms-cli](https://github.com/boxlinknet/kwtsms-cli).
 
 ---
 
@@ -693,7 +675,6 @@ kwtsms_python/
 ├── src/kwtsms/
 │   ├── _core.py      ← KwtSMS class + all sync logic
 │   ├── _async.py     ← AsyncKwtSMS (requires kwtsms[async])
-│   ├── _cli.py       ← kwtsms CLI command
 │   └── __init__.py   ← public exports
 ├── tests/            ← pytest test suite
 ├── examples/         ← runnable example scripts

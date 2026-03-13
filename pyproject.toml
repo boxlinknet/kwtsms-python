@@ -1,6 +1,6 @@
 [project]
 name = "kwtsms"
-version = "0.7.31"
+version = "0.7.32"
 description = "Python client for kwtSMS, the Kuwait SMS gateway trusted by top businesses to deliver messages worldwide, with private Sender ID, free API testing, and non-expiring credits."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -30,9 +30,6 @@ Homepage      = "https://kwtsms.com"
 Repository    = "https://github.com/boxlinknet/kwtsms-python"
 Documentation = "https://github.com/boxlinknet/kwtsms-python/tree/master/examples"
 Changelog     = "https://github.com/boxlinknet/kwtsms-python/blob/master/CHANGELOG.md"
-
-[project.scripts]
-kwtsms = "kwtsms._cli:main"
 
 [build-system]
 requires = ["hatchling"]

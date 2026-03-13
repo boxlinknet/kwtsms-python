@@ -84,33 +84,6 @@ def test_from_env_empty_log_file_env_var_disables_logging(monkeypatch):
     assert sms.log_file == "", "Empty KWTSMS_LOG_FILE should disable logging"
 
 
-def test_setup_sanitizes_newlines_in_credentials(tmp_path, monkeypatch):
-    """Newlines in credentials must be stripped before writing to .env."""
-    from kwtsms._cli import _run_setup
-    from unittest.mock import patch
-
-    env_file = str(tmp_path / ".env")
-    # Simulate a credential with an embedded newline (e.g. paste error)
-    inputs = iter(["user\nname", "pass\nword", "KWT-SMS", "1", "kwtsms.log"])
-    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
-    monkeypatch.setattr("getpass.getpass", lambda _: next(inputs))
-
-    with patch("kwtsms._cli._request", return_value={
-        "result": "OK", "available": 100, "senderid": ["KWT-SMS"],
-    }):
-        _run_setup(env_file)
-
-    content = open(env_file).read()
-    # No newlines should appear in the value positions (only at line ends)
-    lines = content.splitlines()
-    for line in lines:
-        if line.startswith("KWTSMS_USERNAME="):
-            assert "\n" not in line.split("=", 1)[1]
-            assert "username" in line  # sanitized: "user\nname" → "username"
-        if line.startswith("KWTSMS_PASSWORD="):
-            assert "\n" not in line.split("=", 1)[1]
-
-
 def test_from_env_env_var_takes_priority_over_env_file(monkeypatch, tmp_path):
     """Env var must override .env file value."""
     env_file = str(tmp_path / ".env")

@@ -71,17 +71,4 @@ Expected output: `Connected! Balance: X credits`
 
 ## CLI
 
-Send SMS and verify credentials from the terminal:
-
-```bash
-# Verify credentials and check balance
-kwtsms verify
-
-# Send a message
-kwtsms send 96598765432 "Hello from kwtSMS"
-
-# Override sender ID for one message
-kwtsms send 96598765432 "Hello" --sender MY-BRAND
-```
-
-Reads credentials from `.env` or environment variables.
+For a standalone cross-platform CLI, see [kwtsms-cli](https://github.com/boxlinknet/kwtsms-cli).

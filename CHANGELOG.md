@@ -7,7 +7,10 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-## [Unreleased]
+## [0.7.32] - 2026-03-13
+
+### Removed
+- CLI module (`_cli.py`) and `[project.scripts]` entry point removed. Use the standalone [kwtsms-cli](https://github.com/boxlinknet/kwtsms-cli) instead.
 
 ---
 

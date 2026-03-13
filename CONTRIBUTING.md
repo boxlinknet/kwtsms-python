@@ -108,7 +108,6 @@ src/kwtsms/
                   #             validate_phone_input, parse_webhook
   _core.py        # All sync client logic
   _async.py       # AsyncKwtSMS (requires kwtsms[async] / aiohttp)
-  _cli.py         # CLI entry points (kwtsms verify/send/balance/setup)
 
 tests/            # pytest test suite
 examples/         # Runnable example scripts
