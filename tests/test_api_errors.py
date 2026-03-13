@@ -108,11 +108,8 @@ class TestCountryNotAllowed:
 
 class TestInvalidKuwaitNumber:
     """
-    96512345678: passes local length/format validation (11 digits, no non-digits)
-    but is rejected by the kwtSMS API because the local portion (12345678) does
-    not match any valid Kuwait mobile or landline prefix.
-
-    The API returns ERR025 (invalid number: non-digit chars or unrecognised format).
+    96512345678: Kuwait (965) + 12345678 (starts with 1, not a valid mobile prefix).
+    Now caught locally by country-specific format validation.
     """
 
     ERR025_RESPONSE = {
@@ -121,29 +118,36 @@ class TestInvalidKuwaitNumber:
         "description": "Invalid phone number.",
     }
 
-    def test_invalid_kuwait_number_passes_local_validation(self):
-        """96512345678 has 11 digits so our local validator accepts it.
-        The API is the one that rejects it. We must surface that rejection clearly."""
+    def test_invalid_kuwait_number_caught_locally(self):
+        """96512345678 starts with 1 after +965, which is not a valid Kuwait mobile prefix."""
         from kwtsms import validate_phone_input
         ok, error, normalized = validate_phone_input("96512345678")
-        assert ok is True           # local check passes: length is fine
+        assert ok is False
+        assert "Kuwait" in error
         assert normalized == "96512345678"
 
+    def test_send_rejects_invalid_kuwait_number_locally(self):
+        """send() should reject 96512345678 without hitting the API."""
+        result = _client().send("96512345678", "Test")
+        assert result["result"] == "ERROR"
+        assert result["code"] == "ERR_INVALID_INPUT"
+
     def test_api_rejection_surfaced_as_error_dict(self):
+        """ERR025 from API is still surfaced properly for numbers that pass local checks."""
         with patch("kwtsms._core._request", return_value=self.ERR025_RESPONSE):
-            result = _client().send("96512345678", "Test")
+            result = _client().send("96598765432", "Test")
         assert result["result"] == "ERROR"
         assert result["code"] == "ERR025"
 
     def test_api_rejection_has_action(self):
         with patch("kwtsms._core._request", return_value=self.ERR025_RESPONSE):
-            result = _client().send("96512345678", "Test")
+            result = _client().send("96598765432", "Test")
         assert "action" in result
-        assert "country code" in result["action"] or "international format" in result["action"]
+        assert "country code" in result["action"]
 
     def test_does_not_raise_exception(self):
         with patch("kwtsms._core._request", return_value=self.ERR025_RESPONSE):
-            result = _client().send("96512345678", "Test")
+            result = _client().send("96598765432", "Test")
         assert isinstance(result, dict)
 
 

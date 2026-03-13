@@ -72,16 +72,227 @@ def _enrich_error(data: dict) -> dict:
     return data
 
 
+# ── Phone validation rules by country code ───────────────────────────────────
+# Validates local number length and mobile starting digits.
+#
+# Sources (verified across 3+ per country):
+# [1] ITU-T E.164 / National Numbering Plans (itu.int)
+# [2] Wikipedia "Telephone numbers in [Country]" articles
+# [3] HowToCallAbroad.com country dialing guides
+# [4] CountryCode.com country format pages
+#
+# localLengths: valid digit count(s) AFTER country code
+#   e.g. Kuwait 965 + 8 local digits = 11 total digits
+# mobileStartDigits: valid first character(s) of the local number
+#   e.g. Kuwait ["4","5","6","9"] means 9xxxxxxx, 6xxxxxxx, 5xxxxxxx, 4xxxxxxx
+#
+# Countries not listed here pass through with generic E.164 validation (7-15 digits).
+
+_PHONE_RULES: dict = {
+    # GCC
+    "965": {"localLengths": [8], "mobileStartDigits": ["4", "5", "6", "9"]},       # Kuwait
+    "966": {"localLengths": [9], "mobileStartDigits": ["5"]},                       # Saudi Arabia
+    "971": {"localLengths": [9], "mobileStartDigits": ["5"]},                       # UAE
+    "973": {"localLengths": [8], "mobileStartDigits": ["3", "6"]},                  # Bahrain
+    "974": {"localLengths": [8], "mobileStartDigits": ["3", "5", "6", "7"]},        # Qatar
+    "968": {"localLengths": [8], "mobileStartDigits": ["7", "9"]},                  # Oman
+    # Levant
+    "962": {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Jordan
+    "961": {"localLengths": [7, 8], "mobileStartDigits": ["3", "7", "8"]},          # Lebanon
+    "970": {"localLengths": [9], "mobileStartDigits": ["5"]},                       # Palestine
+    "964": {"localLengths": [10], "mobileStartDigits": ["7"]},                      # Iraq
+    "963": {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Syria
+    # Other Arab
+    "967": {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Yemen
+    "20":  {"localLengths": [10], "mobileStartDigits": ["1"]},                      # Egypt
+    "218": {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Libya
+    "216": {"localLengths": [8], "mobileStartDigits": ["2", "4", "5", "9"]},        # Tunisia
+    "212": {"localLengths": [9], "mobileStartDigits": ["6", "7"]},                  # Morocco
+    "213": {"localLengths": [9], "mobileStartDigits": ["5", "6", "7"]},             # Algeria
+    "249": {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Sudan
+    # Non-Arab Middle East
+    "98":  {"localLengths": [10], "mobileStartDigits": ["9"]},                      # Iran
+    "90":  {"localLengths": [10], "mobileStartDigits": ["5"]},                      # Turkey
+    "972": {"localLengths": [9], "mobileStartDigits": ["5"]},                       # Israel
+    # South Asia
+    "91":  {"localLengths": [10], "mobileStartDigits": ["6", "7", "8", "9"]},       # India
+    "92":  {"localLengths": [10], "mobileStartDigits": ["3"]},                      # Pakistan
+    "880": {"localLengths": [10], "mobileStartDigits": ["1"]},                      # Bangladesh
+    "94":  {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Sri Lanka
+    "960": {"localLengths": [7], "mobileStartDigits": ["7", "9"]},                  # Maldives
+    # East Asia
+    "86":  {"localLengths": [11], "mobileStartDigits": ["1"]},                      # China
+    "81":  {"localLengths": [10], "mobileStartDigits": ["7", "8", "9"]},            # Japan
+    "82":  {"localLengths": [10], "mobileStartDigits": ["1"]},                      # South Korea
+    "886": {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Taiwan
+    # Southeast Asia
+    "65":  {"localLengths": [8], "mobileStartDigits": ["8", "9"]},                  # Singapore
+    "60":  {"localLengths": [9, 10], "mobileStartDigits": ["1"]},                   # Malaysia
+    "62":  {"localLengths": [9, 10, 11, 12], "mobileStartDigits": ["8"]},           # Indonesia
+    "63":  {"localLengths": [10], "mobileStartDigits": ["9"]},                      # Philippines
+    "66":  {"localLengths": [9], "mobileStartDigits": ["6", "8", "9"]},             # Thailand
+    "84":  {"localLengths": [9], "mobileStartDigits": ["3", "5", "7", "8", "9"]},   # Vietnam
+    "95":  {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Myanmar
+    "855": {"localLengths": [8, 9], "mobileStartDigits": ["1", "6", "7", "8", "9"]},# Cambodia
+    "976": {"localLengths": [8], "mobileStartDigits": ["6", "8", "9"]},             # Mongolia
+    # Europe
+    "44":  {"localLengths": [10], "mobileStartDigits": ["7"]},                      # UK
+    "33":  {"localLengths": [9], "mobileStartDigits": ["6", "7"]},                  # France
+    "49":  {"localLengths": [10, 11], "mobileStartDigits": ["1"]},                  # Germany
+    "39":  {"localLengths": [10], "mobileStartDigits": ["3"]},                      # Italy
+    "34":  {"localLengths": [9], "mobileStartDigits": ["6", "7"]},                  # Spain
+    "31":  {"localLengths": [9], "mobileStartDigits": ["6"]},                       # Netherlands
+    "32":  {"localLengths": [9]},                                                    # Belgium
+    "41":  {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Switzerland
+    "43":  {"localLengths": [10], "mobileStartDigits": ["6"]},                      # Austria
+    "47":  {"localLengths": [8], "mobileStartDigits": ["4", "9"]},                  # Norway
+    "48":  {"localLengths": [9]},                                                    # Poland
+    "30":  {"localLengths": [10], "mobileStartDigits": ["6"]},                      # Greece
+    "420": {"localLengths": [9], "mobileStartDigits": ["6", "7"]},                  # Czech Republic
+    "46":  {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Sweden
+    "45":  {"localLengths": [8]},                                                    # Denmark
+    "40":  {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Romania
+    "36":  {"localLengths": [9]},                                                    # Hungary
+    "380": {"localLengths": [9]},                                                    # Ukraine
+    # Americas
+    "1":   {"localLengths": [10]},                                                   # USA/Canada
+    "52":  {"localLengths": [10]},                                                   # Mexico
+    "55":  {"localLengths": [11]},                                                   # Brazil
+    "57":  {"localLengths": [10], "mobileStartDigits": ["3"]},                      # Colombia
+    "54":  {"localLengths": [10], "mobileStartDigits": ["9"]},                      # Argentina
+    "56":  {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Chile
+    "58":  {"localLengths": [10], "mobileStartDigits": ["4"]},                      # Venezuela
+    "51":  {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Peru
+    "593": {"localLengths": [9], "mobileStartDigits": ["9"]},                       # Ecuador
+    "53":  {"localLengths": [8], "mobileStartDigits": ["5", "6"]},                  # Cuba
+    # Africa
+    "27":  {"localLengths": [9], "mobileStartDigits": ["6", "7", "8"]},             # South Africa
+    "234": {"localLengths": [10], "mobileStartDigits": ["7", "8", "9"]},            # Nigeria
+    "254": {"localLengths": [9], "mobileStartDigits": ["1", "7"]},                  # Kenya
+    "233": {"localLengths": [9], "mobileStartDigits": ["2", "5"]},                  # Ghana
+    "251": {"localLengths": [9], "mobileStartDigits": ["7", "9"]},                  # Ethiopia
+    "255": {"localLengths": [9], "mobileStartDigits": ["6", "7"]},                  # Tanzania
+    "256": {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Uganda
+    "237": {"localLengths": [9], "mobileStartDigits": ["6"]},                       # Cameroon
+    "225": {"localLengths": [10]},                                                   # Ivory Coast
+    "221": {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Senegal
+    "252": {"localLengths": [9], "mobileStartDigits": ["6", "7"]},                  # Somalia
+    "250": {"localLengths": [9], "mobileStartDigits": ["7"]},                       # Rwanda
+    # Oceania
+    "61":  {"localLengths": [9], "mobileStartDigits": ["4"]},                       # Australia
+    "64":  {"localLengths": [8, 9, 10], "mobileStartDigits": ["2"]},                # New Zealand
+}
+
+_COUNTRY_NAMES: dict = {
+    # Middle East & North Africa
+    "965": "Kuwait", "966": "Saudi Arabia", "971": "UAE", "973": "Bahrain",
+    "974": "Qatar", "968": "Oman", "962": "Jordan", "961": "Lebanon",
+    "970": "Palestine", "964": "Iraq", "963": "Syria", "967": "Yemen",
+    "98": "Iran", "90": "Turkey", "972": "Israel", "20": "Egypt",
+    "218": "Libya", "216": "Tunisia", "212": "Morocco", "213": "Algeria",
+    "249": "Sudan",
+    # Africa
+    "27": "South Africa", "234": "Nigeria", "254": "Kenya", "233": "Ghana",
+    "251": "Ethiopia", "255": "Tanzania", "256": "Uganda", "237": "Cameroon",
+    "225": "Ivory Coast", "221": "Senegal", "252": "Somalia", "250": "Rwanda",
+    # Europe
+    "44": "UK", "33": "France", "49": "Germany", "39": "Italy", "34": "Spain",
+    "31": "Netherlands", "32": "Belgium", "41": "Switzerland", "43": "Austria",
+    "46": "Sweden", "47": "Norway", "45": "Denmark", "48": "Poland",
+    "420": "Czech Republic", "30": "Greece", "40": "Romania", "36": "Hungary",
+    "380": "Ukraine",
+    # Americas
+    "1": "USA/Canada", "52": "Mexico", "55": "Brazil", "57": "Colombia",
+    "54": "Argentina", "56": "Chile", "58": "Venezuela", "51": "Peru",
+    "593": "Ecuador", "53": "Cuba",
+    # Asia
+    "91": "India", "92": "Pakistan", "86": "China", "81": "Japan",
+    "82": "South Korea", "886": "Taiwan", "65": "Singapore", "60": "Malaysia",
+    "62": "Indonesia", "63": "Philippines", "66": "Thailand", "84": "Vietnam",
+    "95": "Myanmar", "855": "Cambodia", "976": "Mongolia", "880": "Bangladesh",
+    "94": "Sri Lanka", "960": "Maldives",
+    # Oceania
+    "61": "Australia", "64": "New Zealand",
+}
+
+
 # ── Phone normalization ────────────────────────────────────────────────────────
 
+def find_country_code(normalized: str) -> Optional[str]:
+    """
+    Find the country code prefix from a normalized phone number.
+    Tries 3-digit codes first, then 2-digit, then 1-digit (longest match wins).
+    Returns None if no known country code matches.
+    """
+    if len(normalized) >= 3:
+        cc3 = normalized[:3]
+        if cc3 in _PHONE_RULES:
+            return cc3
+    if len(normalized) >= 2:
+        cc2 = normalized[:2]
+        if cc2 in _PHONE_RULES:
+            return cc2
+    if len(normalized) >= 1:
+        cc1 = normalized[:1]
+        if cc1 in _PHONE_RULES:
+            return cc1
+    return None
+
+
+def validate_phone_format(normalized: str) -> tuple:
+    """
+    Validate a normalized phone number against country-specific format rules.
+    Checks local number length and mobile starting digits.
+    Numbers with no matching country rules pass through (generic E.164 only).
+
+    Returns: (is_valid: bool, error: str | None)
+    """
+    cc = find_country_code(normalized)
+    if cc is None:
+        return True, None
+
+    rule = _PHONE_RULES[cc]
+    local = normalized[len(cc):]
+    country = _COUNTRY_NAMES.get(cc, f"+{cc}")
+
+    # Check local number length
+    if local and len(local) not in rule["localLengths"]:
+        expected = " or ".join(str(n) for n in rule["localLengths"])
+        return False, (
+            f"Invalid {country} number: expected {expected} digits "
+            f"after +{cc}, got {len(local)}"
+        )
+
+    # Check mobile starting digits (if rules exist for this country)
+    start_digits = rule.get("mobileStartDigits")
+    if start_digits and local:
+        if not any(local.startswith(d) for d in start_digits):
+            return False, (
+                f"Invalid {country} mobile number: after +{cc} "
+                f"must start with {', '.join(start_digits)}"
+            )
+
+    return True, None
+
+
 def normalize_phone(phone: str) -> str:
-    """Normalize phone to kwtSMS format: digits only, no leading zeros."""
+    """
+    Normalize phone to kwtSMS format: digits only, no leading zeros,
+    domestic trunk prefix stripped (e.g. 9660559... becomes 966559...).
+    """
     # 1. Convert Arabic-Indic and Extended Arabic-Indic digits to Latin
     phone = phone.translate(str.maketrans('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'))
     # 2. Strip every non-digit character (spaces, +, dashes, dots, brackets, etc.)
     phone = re.sub(r'\D', '', phone)
     # 3. Strip leading zeros (handles 00 country code prefix)
     phone = phone.lstrip('0')
+    # 4. Strip domestic trunk prefix (leading 0 after country code)
+    #    e.g. 9660559... → 966559..., 97105x → 9715x, 20010x → 2010x
+    cc = find_country_code(phone)
+    if cc:
+        local = phone[len(cc):]
+        if local.startswith("0"):
+            phone = cc + local.lstrip("0")
     return phone
 
 
@@ -99,6 +310,8 @@ def validate_phone_input(phone: str) -> tuple:
     - Non-numeric text with no digits (e.g. "abc", "---")
     - Too short after normalization (< 7 digits)
     - Too long after normalization (> 15 digits, E.164 maximum)
+    - Wrong number of local digits for the country (e.g. Kuwait must be 8 after +965)
+    - Invalid mobile prefix for the country (e.g. Kuwait must start with 4, 5, 6, or 9)
 
     Examples:
         validate_phone_input("+96598765432")   → (True,  None,  "96598765432")
@@ -106,7 +319,7 @@ def validate_phone_input(phone: str) -> tuple:
         validate_phone_input("user@gmail.com") → (False, "'user@gmail.com' is an email address, not a phone number", "")
         validate_phone_input("abc")            → (False, "'abc' is not a valid phone number, no digits found", "")
         validate_phone_input("123")            → (False, "'123' is too short ...", "123")
-        validate_phone_input("1234567890123456") → (False, "'123...' is too long ...", "1234567890123456")
+        validate_phone_input("9660559123456")  → (True,  None,  "966559123456")  # trunk 0 stripped
     """
     raw = str(phone).strip()
 
@@ -118,7 +331,8 @@ def validate_phone_input(phone: str) -> tuple:
     if "@" in raw:
         return False, f"'{raw}' is an email address, not a phone number", ""
 
-    # 3. Normalize (Arabic digits → Latin, strip non-digits, strip leading zeros)
+    # 3. Normalize (Arabic digits → Latin, strip non-digits, strip leading zeros,
+    #    strip domestic trunk prefix after country code)
     normalized = normalize_phone(raw)
 
     # 4. No digits survived normalization (e.g. "abc", "---", "...")
@@ -138,6 +352,11 @@ def validate_phone_input(phone: str) -> tuple:
             f"'{raw}' is too long to be a valid phone number "
             f"({len(normalized)} digits, maximum is 15)"
         ), normalized
+
+    # 7. Country-specific format validation (length + mobile prefix)
+    format_valid, format_error = validate_phone_format(normalized)
+    if not format_valid:
+        return False, format_error, normalized
 
     return True, None, normalized
 
